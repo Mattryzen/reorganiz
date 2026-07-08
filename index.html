@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Routine — organise ta journée</title>
+<meta name="theme-color" content="#2F5DFF">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%232F5DFF'/%3E%3Cpath d='M6 12.5 10 16.5 18 8' stroke='white' stroke-width='2.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <!-- Navigation : sidebar sur desktop, barre basse sur mobile -->
+  <nav class="nav" id="mainNav" aria-label="Navigation principale">
+    <div class="nav-brand">
+      <span class="nav-brand-mark">R</span>
+      <span class="nav-brand-name">Routine</span>
+    </div>
+
+    <button class="nav-item is-active" data-view="today" type="button">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9h12v-9" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="10" y="14" width="4" height="5" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+      <span>Aujourd'hui</span>
+    </button>
+    <button class="nav-item" data-view="dashboard" type="button">
+      <svg viewBox="0 0 24 24" class="nav-icon"><rect x="3.5" y="13" width="4" height="7.5" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/><rect x="10" y="8.5" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/><rect x="16.5" y="4" width="4" height="16.5" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
+      <span>Dashboard</span>
+    </button>
+    <button class="nav-item" data-view="tasks" type="button">
+      <svg viewBox="0 0 24 24" class="nav-icon"><polyline points="4 12 9 17 20 6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Tâches</span>
+    </button>
+
+    <div class="nav-footer">
+      <p>Sauvegarde locale · aucune donnée envoyée en ligne</p>
+    </div>
+  </nav>
+
+  <!-- Contenu principal -->
+  <main class="main">
+
+    <header class="topbar">
+      <div class="topbar-titles">
+        <p class="topbar-date" id="topbarDate">—</p>
+        <h1 id="topbarTitle">Aujourd'hui</h1>
+      </div>
+      <div class="topbar-profile hidden" id="topbarProfileBadge"></div>
+    </header>
+
+    <!-- VUE : AUJOURD'HUI -->
+    <section class="view is-active" id="view-today">
+
+      <div class="profile-select-card" id="profileSelectPrompt">
+        <h2>Où es-tu aujourd'hui ?</h2>
+        <p>Choisis ton lieu pour générer la liste de tâches réalisables aujourd'hui.</p>
+        <div class="profile-grid" id="profileSelectGrid"></div>
+        <p class="profile-select-hint">Tu peux gérer tes lieux dans l'onglet <strong>Tâches</strong>.</p>
+      </div>
+
+      <div class="today-content hidden" id="todayContent">
+
+        <div class="today-summary">
+          <div class="progress-ring-wrap">
+            <svg viewBox="0 0 100 100" class="progress-ring">
+              <circle cx="50" cy="50" r="42" class="progress-ring-track"/>
+              <circle cx="50" cy="50" r="42" class="progress-ring-value" id="todayRingCircle"/>
+            </svg>
+            <span class="progress-ring-text" id="todayProgressText">0%</span>
+          </div>
+          <div class="today-summary-info">
+            <p class="today-profile-line" id="todayProfileLine"></p>
+            <p class="today-count-line" id="todayCountLine"></p>
+            <button class="link-btn" id="changeProfileBtn" type="button">Changer de lieu</button>
+          </div>
+        </div>
+
+        <div class="task-list" id="todayTaskList"></div>
+        <p class="empty-state hidden" id="todayEmptyState">Aucune tâche prévue ici aujourd'hui. Profite de ta journée 🙂</p>
+      </div>
+    </section>
+
+    <!-- VUE : DASHBOARD -->
+    <section class="view" id="view-dashboard">
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-label">Taux de complétion</span>
+          <span class="stat-value" id="statCompletionRate">–</span>
+          <span class="stat-sub">30 derniers jours</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Tâches non faites</span>
+          <span class="stat-value" id="statMissed">–</span>
+          <span class="stat-sub">ce mois-ci</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Tendance</span>
+          <span class="stat-value" id="statTrend">–</span>
+          <span class="stat-sub">vs mois dernier</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-label">Série actuelle</span>
+          <span class="stat-value" id="statStreak">–</span>
+          <span class="stat-sub">jours à 100%</span>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <div class="chart-card-head">
+          <h3>Complétion — 14 derniers jours</h3>
+        </div>
+        <canvas id="completionChart" height="230" aria-label="Graphique du taux de complétion sur 14 jours" role="img"></canvas>
+      </div>
+
+      <div class="missed-card" id="missedTasksCard">
+        <h3>Tâches les plus manquées</h3>
+        <ul id="missedTasksList"></ul>
+        <p class="empty-state hidden" id="missedEmptyState">Pas assez d'historique pour le moment.</p>
+      </div>
+    </section>
+
+    <!-- VUE : TÂCHES -->
+    <section class="view" id="view-tasks">
+
+      <div class="section-head">
+        <h2>Mes tâches</h2>
+        <button class="btn btn-primary" id="openAddTaskBtn" type="button">+ Nouvelle tâche</button>
+      </div>
+      <div class="task-manage-list" id="taskManageList"></div>
+      <p class="empty-state hidden" id="tasksEmptyState">Tu n'as pas encore de tâche. Ajoutes-en une pour commencer.</p>
+
+      <div class="section-head section-head--secondary">
+        <h2>Mes lieux / profils</h2>
+        <button class="btn btn-secondary" id="openAddProfileBtn" type="button">+ Nouveau profil</button>
+      </div>
+      <div class="profile-manage-list" id="profileManageList"></div>
+
+      <div class="danger-zone">
+        <button class="btn btn-text danger" id="resetDataBtn" type="button">Réinitialiser toutes les données</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- MODALE : AJOUT / EDITION TÂCHE -->
+<div class="modal-overlay hidden" id="taskModalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="taskModalTitle">
+    <div class="modal-head">
+      <h3 id="taskModalTitle">Nouvelle tâche</h3>
+      <button class="modal-close" id="taskModalClose" type="button" aria-label="Fermer">&times;</button>
+    </div>
+
+    <form id="taskForm" class="modal-form">
+      <input type="hidden" id="taskId">
+
+      <label class="field">
+        <span class="field-label">Nom de la tâche</span>
+        <input type="text" id="taskName" placeholder="Ex : Faire 40 tractions" required maxlength="60">
+      </label>
+
+      <div class="field">
+        <span class="field-label">Icône</span>
+        <div class="icon-grid" id="taskIconGrid"></div>
+        <input type="hidden" id="taskIcon" value="target">
+      </div>
+
+      <div class="field">
+        <span class="field-label">Où cette tâche est-elle réalisable ?</span>
+        <div class="chip-toggle-grid" id="taskProfileGrid"></div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Fréquence</span>
+        <div class="segmented" id="recurrenceSegmented">
+          <button type="button" class="segmented-btn is-active" data-recurrence="daily">Journalière</button>
+          <button type="button" class="segmented-btn" data-recurrence="weekly">Par semaine</button>
+          <button type="button" class="segmented-btn" data-recurrence="monthly">Par mois</button>
+          <button type="button" class="segmented-btn" data-recurrence="interval">Tous les X jours</button>
+        </div>
+      </div>
+
+      <div class="field recurrence-sub" id="recurrenceWeekly" hidden>
+        <span class="field-label">Quels jours ?</span>
+        <div class="day-toggle-grid" id="weeklyDayGrid"></div>
+      </div>
+
+      <div class="field recurrence-sub" id="recurrenceMonthly" hidden>
+        <span class="field-label">Quel jour du mois ?</span>
+        <input type="number" id="monthlyDay" min="1" max="31" value="1">
+      </div>
+
+      <div class="field recurrence-sub field-row" id="recurrenceInterval" hidden>
+        <label class="field">
+          <span class="field-label">Tous les combien de jours ?</span>
+          <input type="number" id="intervalDays" min="2" max="365" value="3">
+        </label>
+        <label class="field">
+          <span class="field-label">À partir du</span>
+          <input type="date" id="intervalStart">
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-text" id="deleteTaskBtn" hidden>Supprimer</button>
+        <div class="modal-actions-right">
+          <button type="button" class="btn btn-secondary" id="cancelTaskBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODALE : AJOUT / EDITION PROFIL -->
+<div class="modal-overlay hidden" id="profileModalOverlay">
+  <div class="modal modal-small" role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
+    <div class="modal-head">
+      <h3 id="profileModalTitle">Nouveau profil</h3>
+      <button class="modal-close" id="profileModalClose" type="button" aria-label="Fermer">&times;</button>
+    </div>
+
+    <form id="profileForm" class="modal-form">
+      <input type="hidden" id="profileId">
+
+      <label class="field">
+        <span class="field-label">Nom du lieu</span>
+        <input type="text" id="profileName" placeholder="Ex : Chez ma mère" required maxlength="30">
+      </label>
+
+      <div class="field">
+        <span class="field-label">Icône</span>
+        <div class="icon-grid" id="profileIconGrid"></div>
+        <input type="hidden" id="profileIcon" value="home">
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-text" id="deleteProfileBtn" hidden>Supprimer</button>
+        <div class="modal-actions-right">
+          <button type="button" class="btn btn-secondary" id="cancelProfileBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/storage.js"></script>
+<script src="js/recurrence.js"></script>
+<script src="js/state.js"></script>
+<script src="js/charts.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
