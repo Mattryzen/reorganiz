@@ -71,9 +71,9 @@
     document.querySelectorAll('#recurrenceSegmented .segmented-btn').forEach(b => {
       b.classList.toggle('is-active', b.dataset.recurrence === type);
     });
-    document.getElementById('recurrenceWeekly').hidden = type !== 'weekly';
-    document.getElementById('recurrenceMonthly').hidden = type !== 'monthly';
-    document.getElementById('recurrenceInterval').hidden = type !== 'interval';
+    document.getElementById('recurrenceWeekly').classList.toggle('hidden', type !== 'weekly');
+    document.getElementById('recurrenceMonthly').classList.toggle('hidden', type !== 'monthly');
+    document.getElementById('recurrenceInterval').classList.toggle('hidden', type !== 'interval');
 
     if(type === 'weekly'){
       weeklyDaysSelection = (rec && rec.days && rec.days.length) ? [...rec.days] : [1];
@@ -99,7 +99,7 @@
     document.getElementById('taskModalTitle').textContent = task ? 'Modifier la tâche' : 'Nouvelle tâche';
     document.getElementById('taskId').value = taskId || '';
     document.getElementById('taskName').value = task ? task.name : '';
-    document.getElementById('deleteTaskBtn').hidden = !task;
+    document.getElementById('deleteTaskBtn').classList.toggle('hidden', !task);
 
     const icon = task ? task.icon : 'target';
     document.getElementById('taskIcon').value = icon;
@@ -191,7 +191,7 @@
     document.getElementById('profileModalTitle').textContent = profile ? 'Modifier le profil' : 'Nouveau profil';
     document.getElementById('profileId').value = profileId || '';
     document.getElementById('profileName').value = profile ? profile.name : '';
-    document.getElementById('deleteProfileBtn').hidden = !profile;
+    document.getElementById('deleteProfileBtn').classList.toggle('hidden', !profile);
 
     const icon = profile ? profile.icon : 'home';
     document.getElementById('profileIcon').value = icon;
