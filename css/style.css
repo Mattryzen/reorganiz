@@ -542,6 +542,52 @@ a:focus-visible, button:focus-visible, input:focus-visible{
 .section-head--secondary{ margin-top: 34px; }
 
 .section-head h2{ font-size: 18px; font-weight: 700; }
+.section-head h3{ font-size: 15.5px; font-weight: 700; }
+
+/* =========================================================
+   TO-DO — tâches ponctuelles, indépendantes des profils
+   ========================================================= */
+.todo-add-row{
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.todo-add-row input{ flex: 1; }
+
+.todo-row{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-sm);
+}
+.todo-row.is-done{ opacity: .55; }
+
+.todo-row-name{
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 14.5px;
+}
+.todo-row.is-done .todo-row-name{ text-decoration: line-through; }
+
+.todo-delete{
+  border: none;
+  background: none;
+  color: var(--color-text-faint);
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.todo-delete:hover{ color: var(--color-danger); background: var(--color-danger-light); }
+.todo-delete svg{ width: 16px; height: 16px; }
 
 .btn{
   border: none;

@@ -57,6 +57,10 @@ function seedData(){
         createdAt: todayISO(),
       },
     ],
+    todos: [
+      { id: uid('todo'), name: "Renouveler ma carte d'identité", done: false, createdAt: todayISO(), completedAt: null },
+      { id: uid('todo'), name: 'Prendre rendez-vous chez le dentiste', done: false, createdAt: todayISO(), completedAt: null },
+    ],
     logs: {},
   };
 }
@@ -67,6 +71,7 @@ function loadData(){
     if(!raw) return seedData();
     const parsed = JSON.parse(raw);
     if(!parsed.profiles || !parsed.tasks || !parsed.logs) return seedData();
+    if(!Array.isArray(parsed.todos)) parsed.todos = [];
     return parsed;
   }catch(e){
     console.error('Erreur de lecture des données locales, réinitialisation.', e);

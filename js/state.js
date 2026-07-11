@@ -74,6 +74,34 @@ const Store = (function(){
     persist();
   }
 
+  /* ---------- To-do (tâches ponctuelles, indépendantes des profils) ---------- */
+  function getTodos(){ return data.todos; }
+
+  function addTodo({ name }){
+    const todo = { id: uid('todo'), name: name.trim(), done: false, createdAt: todayISO(), completedAt: null };
+    data.todos.push(todo);
+    persist();
+    return todo;
+  }
+
+  function toggleTodo(id){
+    const t = data.todos.find(x => x.id === id);
+    if(!t) return;
+    t.done = !t.done;
+    t.completedAt = t.done ? todayISO() : null;
+    persist();
+  }
+
+  function deleteTodo(id){
+    data.todos = data.todos.filter(x => x.id !== id);
+    persist();
+  }
+
+  function clearCompletedTodos(){
+    data.todos = data.todos.filter(x => !x.done);
+    persist();
+  }
+
   /* ---------- Journaux quotidiens ---------- */
   function getLog(dateISO){ return data.logs[dateISO] || null; }
 
@@ -249,6 +277,7 @@ const Store = (function(){
     toISO,
     getProfiles, getProfile, addProfile, updateProfile, deleteProfile,
     getTasks, getTask, addTask, updateTask, deleteTask,
+    getTodos, addTodo, toggleTodo, deleteTodo, clearCompletedTodos,
     getLog, getScheduledTasksForDate, setProfileForDate, toggleTask,
     computeStats,
     resetAll,

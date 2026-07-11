@@ -21,6 +21,7 @@
     document.querySelectorAll('.view').forEach(sec => sec.classList.toggle('is-active', sec.id === `view-${view}`));
     UI.updateTopbar(view);
     if(view === 'today') UI.renderToday();
+    if(view === 'todo') UI.renderTodoView();
     if(view === 'dashboard') UI.renderDashboard();
     if(view === 'tasks') UI.renderTasksView();
   }
@@ -49,6 +50,50 @@
     const iso = Store.toISO(new Date());
     Store.toggleTask(iso, btn.dataset.toggleTask);
     UI.renderToday();
+  });
+
+  /* ---------- Vue À faire (tâches ponctuelles) ---------- */
+  function addTodoFromInput(){
+    const input = document.getElementById('todoInput');
+    const name = input.value.trim();
+    if(!name) return;
+    Store.addTodo({ name });
+    input.value = '';
+    UI.renderTodoView();
+    input.focus();
+  }
+
+  document.getElementById('addTodoBtn').addEventListener('click', addTodoFromInput);
+  document.getElementById('todoInput').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      addTodoFromInput();
+    }
+  });
+
+  function handleTodoListClick(e){
+    const toggleBtn = e.target.closest('[data-toggle-todo]');
+    if(toggleBtn){
+      Store.toggleTodo(toggleBtn.dataset.toggleTodo);
+      UI.renderTodoView();
+      return;
+    }
+    const deleteBtn = e.target.closest('[data-delete-todo]');
+    if(deleteBtn){
+      Store.deleteTodo(deleteBtn.dataset.deleteTodo);
+      UI.renderTodoView();
+    }
+  }
+
+  document.getElementById('todoActiveList').addEventListener('click', handleTodoListClick);
+  document.getElementById('todoCompletedList').addEventListener('click', handleTodoListClick);
+
+  document.getElementById('clearCompletedTodosBtn').addEventListener('click', () => {
+    if(confirm('Supprimer définitivement les tâches terminées ?')){
+      Store.clearCompletedTodos();
+      UI.renderTodoView();
+      UI.showToast('Tâches terminées supprimées');
+    }
   });
 
   /* ---------- Modale : Tâche ---------- */

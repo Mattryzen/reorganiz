@@ -38,9 +38,17 @@ const ICONS = {
   target: '<circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.6" fill="none"/><circle cx="12" cy="12" r="4.3" stroke="currentColor" stroke-width="1.6" fill="none"/><circle cx="12" cy="12" r="1" fill="currentColor"/>',
 
   check: '<polyline points="4 12 9 17 20 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>',
+
+  trash: '<path d="M4 7h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M9.5 7V4.8c0-.4.4-.8.9-.8h3.2c.5 0 .9.4.9.8V7" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.3 7l.9 12c.1.5.5.9 1 .9h7.6c.5 0 .9-.4 1-.9l.9-12" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
 };
 
-const ICON_KEYS = Object.keys(ICONS);
+// Liste réduite utilisée par les sélecteurs d'icônes (tâches / profils).
+// Les icônes utilitaires (check, trash…) ne sont volontairement pas incluses.
+const ICON_KEYS = [
+  'home', 'dumbbell', 'book', 'briefcase', 'laptop', 'heart', 'music',
+  'utensils', 'bike', 'moon', 'sun', 'star', 'droplet', 'leaf', 'phone',
+  'pencil', 'target',
+];
 
 function iconSvg(name, extraClass){
   const inner = ICONS[name] || ICONS.target;

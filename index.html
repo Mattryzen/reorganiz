@@ -26,6 +26,10 @@
       <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 11.5 12 4l8 7.5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M6 10v9h12v-9" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><rect x="10" y="14" width="4" height="5" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
       <span>Aujourd'hui</span>
     </button>
+    <button class="nav-item" data-view="todo" type="button">
+      <svg viewBox="0 0 24 24" class="nav-icon"><line x1="9" y1="6" x2="20" y2="6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="9" y1="12" x2="20" y2="12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><line x1="9" y1="18" x2="20" y2="18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><polyline points="4 6 5 7 7 5" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><polyline points="4 12 5 13 7 11" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/><polyline points="4 18 5 19 7 17" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>À faire</span>
+    </button>
     <button class="nav-item" data-view="dashboard" type="button">
       <svg viewBox="0 0 24 24" class="nav-icon"><rect x="3.5" y="13" width="4" height="7.5" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/><rect x="10" y="8.5" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/><rect x="16.5" y="4" width="4" height="16.5" rx="1" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>
       <span>Dashboard</span>
@@ -80,6 +84,25 @@
 
         <div class="task-list" id="todayTaskList"></div>
         <p class="empty-state hidden" id="todayEmptyState">Aucune tâche prévue ici aujourd'hui. Profite de ta journée 🙂</p>
+      </div>
+    </section>
+
+    <!-- VUE : À FAIRE (tâches ponctuelles, sans profil ni fréquence) -->
+    <section class="view" id="view-todo">
+      <div class="todo-add-row">
+        <input type="text" id="todoInput" placeholder="Ajouter une tâche ponctuelle…" maxlength="80">
+        <button class="btn btn-primary" id="addTodoBtn" type="button">Ajouter</button>
+      </div>
+
+      <div class="task-list" id="todoActiveList"></div>
+      <p class="empty-state hidden" id="todoEmptyState">Aucune tâche ponctuelle pour le moment. Ajoutes-en une ci-dessus.</p>
+
+      <div class="hidden" id="todoCompletedSection">
+        <div class="section-head section-head--secondary">
+          <h3>Terminées</h3>
+          <button class="btn btn-text" id="clearCompletedTodosBtn" type="button">Vider les terminées</button>
+        </div>
+        <div class="task-list" id="todoCompletedList"></div>
       </div>
     </section>
 

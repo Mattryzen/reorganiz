@@ -27,7 +27,7 @@ const UI = (function(){
   /* ---------- Topbar ---------- */
   function updateTopbar(view){
     document.getElementById('topbarDate').textContent = formatDateLong(new Date());
-    const titles = { today: "Aujourd'hui", dashboard: 'Dashboard', tasks: 'Mes tâches' };
+    const titles = { today: "Aujourd'hui", todo: 'À faire', dashboard: 'Dashboard', tasks: 'Mes tâches' };
     document.getElementById('topbarTitle').textContent = titles[view] || '';
     if(view !== 'today'){
       document.getElementById('topbarProfileBadge').classList.add('hidden');
@@ -119,6 +119,43 @@ const UI = (function(){
         </div>
       `;
     }).join('');
+  }
+
+  /* ---------- Vue : À faire (tâches ponctuelles) ---------- */
+  function renderTodoRow(t){
+    return `
+      <div class="todo-row ${t.done ? 'is-done' : ''}" data-todo-id="${t.id}">
+        <button type="button" class="task-check" data-toggle-todo="${t.id}" aria-label="Marquer la tâche comme faite">${iconSvg('check')}</button>
+        <p class="todo-row-name">${escapeHtml(t.name)}</p>
+        <button type="button" class="todo-delete" data-delete-todo="${t.id}" aria-label="Supprimer la tâche">${iconSvg('trash')}</button>
+      </div>
+    `;
+  }
+
+  function renderTodoView(){
+    const todos = Store.getTodos();
+    const active = todos.filter(t => !t.done).reverse();
+    const completed = todos.filter(t => t.done).reverse();
+
+    const activeList = document.getElementById('todoActiveList');
+    const emptyState = document.getElementById('todoEmptyState');
+    if(!active.length){
+      activeList.innerHTML = '';
+      emptyState.classList.remove('hidden');
+    }else{
+      emptyState.classList.add('hidden');
+      activeList.innerHTML = active.map(renderTodoRow).join('');
+    }
+
+    const completedSection = document.getElementById('todoCompletedSection');
+    const completedList = document.getElementById('todoCompletedList');
+    if(!completed.length){
+      completedSection.classList.add('hidden');
+      completedList.innerHTML = '';
+    }else{
+      completedSection.classList.remove('hidden');
+      completedList.innerHTML = completed.map(renderTodoRow).join('');
+    }
   }
 
   /* ---------- Vue : Dashboard ---------- */
@@ -280,7 +317,7 @@ const UI = (function(){
 
   return {
     escapeHtml, updateTopbar, showToast,
-    renderToday, renderDashboard, renderTasksView, showProfilePrompt,
+    renderToday, renderTodoView, renderDashboard, renderTasksView, showProfilePrompt,
     buildIconGrid, buildProfileChipGrid, buildDayToggleGrid,
   };
 })();
