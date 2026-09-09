@@ -24,6 +24,7 @@
     if(view === 'todo') UI.renderTodoView();
     if(view === 'dashboard') UI.renderDashboard();
     if(view === 'tasks') UI.renderTasksView();
+    if(view === 'scolaire') UI.renderScolaireView();
   }
 
   document.querySelectorAll('.nav-item').forEach(btn => {
@@ -287,7 +288,7 @@
     }
   });
 
-  /* ---------- Réinitialisation ---------- */
+  /* ---------- Réinitialisation générale ---------- */
   document.getElementById('resetDataBtn').addEventListener('click', () => {
     if(confirm('Cette action supprime toutes tes tâches, profils et statistiques. Continuer ?')){
       Store.resetAll();
@@ -296,11 +297,302 @@
     }
   });
 
+  /* =========================================================
+     SCOLAIRE — sous-onglets + modales (Devoirs, Notes, Paramètres)
+     ========================================================= */
+  let currentScolaireSubview = 'devoirs';
+  let editingHomeworkId = null;
+  let homeworkSubjectSelection = null;
+  let currentHomeworkType = 'devoir';
+  let editingGradeId = null;
+  let gradeSubjectSelection = null;
+  let editingSubjectId = null;
+
+  const homeworkModalOverlay = document.getElementById('homeworkModalOverlay');
+  const homeworkForm = document.getElementById('homeworkForm');
+  const gradeModalOverlay = document.getElementById('gradeModalOverlay');
+  const gradeForm = document.getElementById('gradeForm');
+  const subjectModalOverlay = document.getElementById('subjectModalOverlay');
+  const subjectForm = document.getElementById('subjectForm');
+
+  /* ---------- Sous-onglets ---------- */
+  document.getElementById('scolaireSubtabs').addEventListener('click', (e) => {
+    const btn = e.target.closest('.subtab-btn');
+    if(!btn) return;
+    currentScolaireSubview = btn.dataset.subview;
+    document.querySelectorAll('.subtab-btn').forEach(b => b.classList.toggle('is-active', b === btn));
+    document.querySelectorAll('.subview').forEach(sv => sv.classList.toggle('is-active', sv.id === `subview-${currentScolaireSubview}`));
+  });
+
+  /* ---------- Modale : Devoir / Évaluation ---------- */
+  function renderHomeworkSubjectGrid(){
+    UI.buildSingleChipGrid(document.getElementById('homeworkSubjectGrid'), Store.getSubjects(), homeworkSubjectSelection, (id) => {
+      homeworkSubjectSelection = id;
+      renderHomeworkSubjectGrid();
+    });
+  }
+
+  function setHomeworkType(type){
+    currentHomeworkType = type;
+    document.querySelectorAll('#homeworkTypeSegmented .segmented-btn').forEach(b => {
+      b.classList.toggle('is-active', b.dataset.hwtype === type);
+    });
+  }
+
+  document.querySelectorAll('#homeworkTypeSegmented .segmented-btn').forEach(btn => {
+    btn.addEventListener('click', () => setHomeworkType(btn.dataset.hwtype));
+  });
+
+  function openHomeworkModal(hwId){
+    editingHomeworkId = hwId || null;
+    const hw = hwId ? Store.getHomeworkItem(hwId) : null;
+
+    document.getElementById('homeworkModalTitle').textContent = hw ? 'Modifier' : 'Nouveau devoir / évaluation';
+    document.getElementById('homeworkId').value = hwId || '';
+    document.getElementById('homeworkTitle').value = hw ? hw.title : '';
+    document.getElementById('homeworkDueDate').value = hw ? hw.dueDate : Store.toISO(new Date());
+    document.getElementById('deleteHomeworkBtn').classList.toggle('hidden', !hw);
+
+    setHomeworkType(hw ? hw.type : 'devoir');
+
+    const subjects = Store.getSubjects();
+    homeworkSubjectSelection = hw ? hw.subjectId : (subjects[0] ? subjects[0].id : null);
+    renderHomeworkSubjectGrid();
+
+    homeworkModalOverlay.classList.remove('hidden');
+  }
+
+  function closeHomeworkModal(){ homeworkModalOverlay.classList.add('hidden'); }
+
+  document.getElementById('openAddHomeworkBtn').addEventListener('click', () => {
+    if(!Store.getSubjects().length){
+      UI.showToast('Ajoute d\'abord une matière dans Paramètres');
+      return;
+    }
+    openHomeworkModal(null);
+  });
+
+  function handleHomeworkListClick(e){
+    const toggleBtn = e.target.closest('[data-toggle-hw]');
+    if(toggleBtn){
+      Store.toggleHomeworkDone(toggleBtn.dataset.toggleHw);
+      UI.renderScolaireDevoirs();
+      return;
+    }
+    const editBtn = e.target.closest('[data-edit-hw]');
+    if(editBtn) openHomeworkModal(editBtn.dataset.editHw);
+  }
+
+  document.getElementById('homeworkActiveList').addEventListener('click', handleHomeworkListClick);
+  document.getElementById('homeworkDoneList').addEventListener('click', handleHomeworkListClick);
+
+  document.getElementById('homeworkModalClose').addEventListener('click', closeHomeworkModal);
+  document.getElementById('cancelHomeworkBtn').addEventListener('click', closeHomeworkModal);
+  homeworkModalOverlay.addEventListener('click', (e) => { if(e.target === homeworkModalOverlay) closeHomeworkModal(); });
+
+  homeworkForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const title = document.getElementById('homeworkTitle').value.trim();
+    const dueDate = document.getElementById('homeworkDueDate').value;
+    if(!title || !dueDate || !homeworkSubjectSelection) return;
+
+    const payload = { subjectId: homeworkSubjectSelection, type: currentHomeworkType, title, dueDate };
+
+    if(editingHomeworkId){
+      Store.updateHomework(editingHomeworkId, payload);
+      UI.showToast('Mis à jour');
+    }else{
+      Store.addHomework(payload);
+      UI.showToast('Ajouté');
+    }
+    closeHomeworkModal();
+    UI.renderScolaireDevoirs();
+  });
+
+  document.getElementById('deleteHomeworkBtn').addEventListener('click', () => {
+    if(!editingHomeworkId) return;
+    if(confirm('Supprimer cet élément ?')){
+      Store.deleteHomework(editingHomeworkId);
+      closeHomeworkModal();
+      UI.renderScolaireDevoirs();
+      UI.showToast('Supprimé');
+    }
+  });
+
+  document.getElementById('clearDoneHomeworkBtn').addEventListener('click', () => {
+    if(confirm('Supprimer définitivement les éléments terminés / passés ?')){
+      Store.clearDoneHomework();
+      UI.renderScolaireDevoirs();
+      UI.showToast('Éléments supprimés');
+    }
+  });
+
+  /* ---------- Modale : Note ---------- */
+  function renderGradeSubjectGrid(){
+    UI.buildSingleChipGrid(document.getElementById('gradeSubjectGrid'), Store.getSubjects(), gradeSubjectSelection, (id) => {
+      gradeSubjectSelection = id;
+      renderGradeSubjectGrid();
+    });
+  }
+
+  function openGradeModal(gradeId, presetSubjectId){
+    editingGradeId = gradeId || null;
+    const grade = gradeId ? Store.getGrade(gradeId) : null;
+
+    document.getElementById('gradeModalTitle').textContent = grade ? 'Modifier la note' : 'Nouvelle note';
+    document.getElementById('gradeId').value = gradeId || '';
+    document.getElementById('gradeTitle').value = grade ? grade.title : '';
+    document.getElementById('gradeValue').value = grade ? grade.value : '';
+    document.getElementById('gradeMaxPoints').value = grade ? grade.maxPoints : 20;
+    document.getElementById('gradeCoefficient').value = grade ? grade.coefficient : 1;
+    document.getElementById('gradeDate').value = grade ? grade.date : Store.toISO(new Date());
+    document.getElementById('deleteGradeBtn').classList.toggle('hidden', !grade);
+
+    const subjects = Store.getSubjects();
+    gradeSubjectSelection = grade ? grade.subjectId : (presetSubjectId || (subjects[0] ? subjects[0].id : null));
+    renderGradeSubjectGrid();
+
+    gradeModalOverlay.classList.remove('hidden');
+  }
+
+  function closeGradeModal(){ gradeModalOverlay.classList.add('hidden'); }
+
+  document.getElementById('openAddGradeBtn').addEventListener('click', () => {
+    if(!Store.getSubjects().length){
+      UI.showToast('Ajoute d\'abord une matière dans Paramètres');
+      return;
+    }
+    openGradeModal(null);
+  });
+
+  document.getElementById('subjectGradesList').addEventListener('click', (e) => {
+    const editBtn = e.target.closest('[data-edit-grade]');
+    if(editBtn) openGradeModal(editBtn.dataset.editGrade);
+  });
+
+  document.getElementById('gradeModalClose').addEventListener('click', closeGradeModal);
+  document.getElementById('cancelGradeBtn').addEventListener('click', closeGradeModal);
+  gradeModalOverlay.addEventListener('click', (e) => { if(e.target === gradeModalOverlay) closeGradeModal(); });
+
+  gradeForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const value = Number(document.getElementById('gradeValue').value);
+    const maxPoints = Number(document.getElementById('gradeMaxPoints').value) || 20;
+    if(Number.isNaN(value) || !gradeSubjectSelection) return;
+
+    const payload = {
+      subjectId: gradeSubjectSelection,
+      title: document.getElementById('gradeTitle').value.trim(),
+      value,
+      maxPoints,
+      coefficient: Number(document.getElementById('gradeCoefficient').value) || 1,
+      date: document.getElementById('gradeDate').value || Store.toISO(new Date()),
+    };
+
+    if(editingGradeId){
+      Store.updateGrade(editingGradeId, payload);
+      UI.showToast('Note mise à jour');
+    }else{
+      Store.addGrade(payload);
+      UI.showToast('Note ajoutée');
+    }
+    closeGradeModal();
+    UI.renderScolaireNotes();
+  });
+
+  document.getElementById('deleteGradeBtn').addEventListener('click', () => {
+    if(!editingGradeId) return;
+    if(confirm('Supprimer cette note ?')){
+      Store.deleteGrade(editingGradeId);
+      closeGradeModal();
+      UI.renderScolaireNotes();
+      UI.showToast('Note supprimée');
+    }
+  });
+
+  /* ---------- Modale : Matière ---------- */
+  function openSubjectModal(subjectId){
+    editingSubjectId = subjectId || null;
+    const subject = subjectId ? Store.getSubject(subjectId) : null;
+
+    document.getElementById('subjectModalTitle').textContent = subject ? 'Modifier la matière' : 'Nouvelle matière';
+    document.getElementById('subjectId').value = subjectId || '';
+    document.getElementById('subjectName').value = subject ? subject.name : '';
+    document.getElementById('subjectCoefficient').value = subject ? subject.coefficient : 1;
+    document.getElementById('deleteSubjectBtn').classList.toggle('hidden', !subject);
+
+    const color = subject ? subject.color : SUBJECT_COLORS[Store.getSubjects().length % SUBJECT_COLORS.length];
+    document.getElementById('subjectColor').value = color;
+    UI.buildColorGrid(document.getElementById('subjectColorGrid'), color, (val) => {
+      document.getElementById('subjectColor').value = val;
+    });
+
+    subjectModalOverlay.classList.remove('hidden');
+  }
+
+  function closeSubjectModal(){ subjectModalOverlay.classList.add('hidden'); }
+
+  document.getElementById('openAddSubjectBtn').addEventListener('click', () => openSubjectModal(null));
+  document.getElementById('subjectManageList').addEventListener('click', (e) => {
+    const row = e.target.closest('.profile-manage-row');
+    if(row) openSubjectModal(row.dataset.subjectId);
+  });
+  document.getElementById('subjectModalClose').addEventListener('click', closeSubjectModal);
+  document.getElementById('cancelSubjectBtn').addEventListener('click', closeSubjectModal);
+  subjectModalOverlay.addEventListener('click', (e) => { if(e.target === subjectModalOverlay) closeSubjectModal(); });
+
+  subjectForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const name = document.getElementById('subjectName').value.trim();
+    if(!name) return;
+
+    const payload = {
+      name,
+      color: document.getElementById('subjectColor').value,
+      coefficient: Number(document.getElementById('subjectCoefficient').value) || 1,
+    };
+
+    if(editingSubjectId){
+      Store.updateSubject(editingSubjectId, payload);
+      UI.showToast('Matière mise à jour');
+    }else{
+      Store.addSubject(payload);
+      UI.showToast('Matière ajoutée');
+    }
+    closeSubjectModal();
+    UI.renderScolaireParametres();
+    UI.renderScolaireNotes();
+  });
+
+  document.getElementById('deleteSubjectBtn').addEventListener('click', () => {
+    if(!editingSubjectId) return;
+    if(confirm('Supprimer cette matière ? Les devoirs, évaluations et notes associés seront aussi supprimés.')){
+      Store.deleteSubject(editingSubjectId);
+      closeSubjectModal();
+      UI.renderScolaireParametres();
+      UI.renderScolaireNotes();
+      UI.renderScolaireDevoirs();
+      UI.showToast('Matière supprimée');
+    }
+  });
+
+  /* ---------- Réinitialisation scolaire ---------- */
+  document.getElementById('resetSchoolDataBtn').addEventListener('click', () => {
+    if(confirm('Cette action supprime toutes tes matières, devoirs, évaluations et notes. Continuer ?')){
+      Store.resetSchoolData();
+      UI.renderScolaireView();
+      UI.showToast('Données scolaires réinitialisées');
+    }
+  });
+
   /* ---------- Raccourcis clavier ---------- */
   document.addEventListener('keydown', (e) => {
     if(e.key === 'Escape'){
       closeTaskModal();
       closeProfileModal();
+      closeHomeworkModal();
+      closeGradeModal();
+      closeSubjectModal();
     }
   });
 

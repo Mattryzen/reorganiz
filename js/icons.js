@@ -54,3 +54,11 @@ function iconSvg(name, extraClass){
   const inner = ICONS[name] || ICONS.target;
   return `<svg viewBox="0 0 24 24" class="${extraClass || ''}">${inner}</svg>`;
 }
+
+/* =========================================================
+   SCOLAIRE — palette de couleurs disponibles pour les matières
+   ========================================================= */
+const SUBJECT_COLORS = [
+  '#2F5DFF', '#0EA37A', '#E4574C', '#F0A93A',
+  '#8B6FEA', '#2FB6C4', '#E2578E', '#C2410C',
+];

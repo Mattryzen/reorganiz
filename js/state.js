@@ -267,6 +267,174 @@ const Store = (function(){
     };
   }
 
+  /* ---------- Scolaire : matières ---------- */
+  function getSubjects(){ return data.subjects; }
+
+  function getSubject(id){ return data.subjects.find(s => s.id === id) || null; }
+
+  function addSubject({ name, color, coefficient }){
+    const subject = {
+      id: uid('subj'),
+      name: name.trim(),
+      color: color || SUBJECT_COLORS[0],
+      coefficient: coefficient || 1,
+      createdAt: todayISO(),
+    };
+    data.subjects.push(subject);
+    persist();
+    return subject;
+  }
+
+  function updateSubject(id, { name, color, coefficient }){
+    const s = getSubject(id);
+    if(!s) return null;
+    s.name = name.trim();
+    s.color = color || s.color;
+    s.coefficient = coefficient || 1;
+    persist();
+    return s;
+  }
+
+  function deleteSubject(id){
+    data.subjects = data.subjects.filter(s => s.id !== id);
+    data.homework = data.homework.filter(h => h.subjectId !== id);
+    data.grades = data.grades.filter(g => g.subjectId !== id);
+    persist();
+  }
+
+  /* ---------- Scolaire : devoirs / évaluations ---------- */
+  function getHomework(){ return data.homework; }
+
+  function getHomeworkItem(id){ return data.homework.find(h => h.id === id) || null; }
+
+  function addHomework({ subjectId, type, title, dueDate }){
+    const hw = {
+      id: uid('hw'),
+      subjectId,
+      type: type === 'evaluation' ? 'evaluation' : 'devoir',
+      title: title.trim(),
+      dueDate,
+      done: false,
+      createdAt: todayISO(),
+    };
+    data.homework.push(hw);
+    persist();
+    return hw;
+  }
+
+  function updateHomework(id, { subjectId, type, title, dueDate }){
+    const h = getHomeworkItem(id);
+    if(!h) return null;
+    h.subjectId = subjectId;
+    h.type = type === 'evaluation' ? 'evaluation' : 'devoir';
+    h.title = title.trim();
+    h.dueDate = dueDate;
+    persist();
+    return h;
+  }
+
+  function toggleHomeworkDone(id){
+    const h = getHomeworkItem(id);
+    if(!h) return;
+    h.done = !h.done;
+    persist();
+  }
+
+  function deleteHomework(id){
+    data.homework = data.homework.filter(h => h.id !== id);
+    persist();
+  }
+
+  // Un devoir est "actif" tant qu'il n'est pas coché fait ;
+  // une évaluation est "active" tant que sa date n'est pas passée.
+  function isHomeworkActive(h){
+    return h.type === 'devoir' ? !h.done : h.dueDate >= todayISO();
+  }
+
+  function clearDoneHomework(){
+    data.homework = data.homework.filter(h => isHomeworkActive(h));
+    persist();
+  }
+
+  /* ---------- Scolaire : notes ---------- */
+  function getGrades(){ return data.grades; }
+
+  function getGrade(id){ return data.grades.find(g => g.id === id) || null; }
+
+  function gradesForSubject(subjectId){
+    return data.grades.filter(g => g.subjectId === subjectId);
+  }
+
+  function addGrade({ subjectId, title, value, maxPoints, coefficient, date }){
+    const grade = {
+      id: uid('grade'),
+      subjectId,
+      title: (title || '').trim(),
+      value: Number(value),
+      maxPoints: Number(maxPoints) || 20,
+      coefficient: Number(coefficient) || 1,
+      date: date || todayISO(),
+      createdAt: todayISO(),
+    };
+    data.grades.push(grade);
+    persist();
+    return grade;
+  }
+
+  function updateGrade(id, { subjectId, title, value, maxPoints, coefficient, date }){
+    const g = getGrade(id);
+    if(!g) return null;
+    g.subjectId = subjectId;
+    g.title = (title || '').trim();
+    g.value = Number(value);
+    g.maxPoints = Number(maxPoints) || 20;
+    g.coefficient = Number(coefficient) || 1;
+    g.date = date || g.date;
+    persist();
+    return g;
+  }
+
+  function deleteGrade(id){
+    data.grades = data.grades.filter(g => g.id !== id);
+    persist();
+  }
+
+  // Moyenne d'une matière : chaque note est ramenée sur 20, puis pondérée par son coefficient.
+  function subjectAverage(subjectId){
+    const grades = gradesForSubject(subjectId);
+    if(!grades.length) return null;
+    let weightedSum = 0, coeffSum = 0;
+    grades.forEach(g => {
+      if(!g.maxPoints) return;
+      const normalized = (g.value / g.maxPoints) * 20;
+      weightedSum += normalized * g.coefficient;
+      coeffSum += g.coefficient;
+    });
+    if(coeffSum === 0) return null;
+    return weightedSum / coeffSum;
+  }
+
+  // Moyenne générale : moyenne de chaque matière, pondérée par le coefficient de la matière.
+  function overallAverage(){
+    let weightedSum = 0, coeffSum = 0;
+    data.subjects.forEach(s => {
+      const avg = subjectAverage(s.id);
+      if(avg === null) return;
+      const coeff = s.coefficient || 1;
+      weightedSum += avg * coeff;
+      coeffSum += coeff;
+    });
+    if(coeffSum === 0) return null;
+    return weightedSum / coeffSum;
+  }
+
+  function resetSchoolData(){
+    data.subjects = [];
+    data.homework = [];
+    data.grades = [];
+    persist();
+  }
+
   function resetAll(){
     clearData();
     data = seedData();
@@ -280,6 +448,11 @@ const Store = (function(){
     getTodos, addTodo, toggleTodo, deleteTodo, clearCompletedTodos,
     getLog, getScheduledTasksForDate, setProfileForDate, toggleTask,
     computeStats,
+    getSubjects, getSubject, addSubject, updateSubject, deleteSubject,
+    getHomework, getHomeworkItem, addHomework, updateHomework, toggleHomeworkDone,
+    deleteHomework, isHomeworkActive, clearDoneHomework,
+    getGrades, getGrade, gradesForSubject, addGrade, updateGrade, deleteGrade,
+    subjectAverage, overallAverage, resetSchoolData,
     resetAll,
   };
 })();

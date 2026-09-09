@@ -38,6 +38,10 @@
       <svg viewBox="0 0 24 24" class="nav-icon"><polyline points="4 12 9 17 20 6" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
       <span>Tâches</span>
     </button>
+    <button class="nav-item" data-view="scolaire" type="button">
+      <svg viewBox="0 0 24 24" class="nav-icon"><path d="M4 5.5C4 4.7 4.7 4 5.5 4H12v16H5.5C4.7 20 4 19.3 4 18.5V5.5Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/><path d="M20 5.5C20 4.7 19.3 4 18.5 4H12v16h6.5c.8 0 1.5-.7 1.5-1.5V5.5Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>
+      <span>Scolaire</span>
+    </button>
 
     <div class="nav-footer">
       <p>Sauvegarde locale · aucune donnée envoyée en ligne</p>
@@ -167,6 +171,68 @@
       </div>
     </section>
 
+    <!-- VUE : SCOLAIRE -->
+    <section class="view" id="view-scolaire">
+
+      <div class="subtabs" id="scolaireSubtabs">
+        <button class="subtab-btn is-active" data-subview="devoirs" type="button">Devoirs</button>
+        <button class="subtab-btn" data-subview="notes" type="button">Notes</button>
+        <button class="subtab-btn" data-subview="parametres" type="button">Paramètres</button>
+      </div>
+
+      <!-- SOUS-VUE : DEVOIRS / ÉVALUATIONS -->
+      <div class="subview is-active" id="subview-devoirs">
+        <div class="section-head">
+          <h2>Devoirs & évaluations</h2>
+          <button class="btn btn-primary" id="openAddHomeworkBtn" type="button">+ Ajouter</button>
+        </div>
+
+        <div class="task-list" id="homeworkActiveList"></div>
+        <p class="empty-state hidden" id="homeworkEmptyState">Rien à faire pour le moment 🎉</p>
+
+        <div class="hidden" id="homeworkDoneSection">
+          <div class="section-head section-head--secondary">
+            <h3>Terminés / passés</h3>
+            <button class="btn btn-text" id="clearDoneHomeworkBtn" type="button">Vider</button>
+          </div>
+          <div class="task-list" id="homeworkDoneList"></div>
+        </div>
+      </div>
+
+      <!-- SOUS-VUE : NOTES -->
+      <div class="subview" id="subview-notes">
+        <div class="overall-average-card" id="overallAverageCard">
+          <div>
+            <div class="overall-average-value" id="overallAverageValue">–</div>
+            <div class="overall-average-label">Moyenne générale</div>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <h2>Notes par matière</h2>
+          <button class="btn btn-primary" id="openAddGradeBtn" type="button">+ Note</button>
+        </div>
+
+        <div id="subjectGradesList"></div>
+        <p class="empty-state hidden" id="notesEmptyState">Ajoute une matière dans Paramètres pour commencer.</p>
+      </div>
+
+      <!-- SOUS-VUE : PARAMÈTRES (matières) -->
+      <div class="subview" id="subview-parametres">
+        <div class="section-head">
+          <h2>Mes matières</h2>
+          <button class="btn btn-primary" id="openAddSubjectBtn" type="button">+ Matière</button>
+        </div>
+        <div class="profile-manage-list" id="subjectManageList"></div>
+        <p class="empty-state hidden" id="subjectsEmptyState">Tu n'as pas encore de matière. Ajoutes-en une pour commencer.</p>
+
+        <div class="danger-zone">
+          <button class="btn btn-text danger" id="resetSchoolDataBtn" type="button">Réinitialiser les données scolaires</button>
+        </div>
+      </div>
+
+    </section>
+
   </main>
 </div>
 
@@ -265,6 +331,143 @@
         <button type="button" class="btn btn-text hidden" id="deleteProfileBtn">Supprimer</button>
         <div class="modal-actions-right">
           <button type="button" class="btn btn-secondary" id="cancelProfileBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODALE : AJOUT / EDITION DEVOIR OU ÉVALUATION -->
+<div class="modal-overlay hidden" id="homeworkModalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="homeworkModalTitle">
+    <div class="modal-head">
+      <h3 id="homeworkModalTitle">Nouveau devoir / évaluation</h3>
+      <button class="modal-close" id="homeworkModalClose" type="button" aria-label="Fermer">&times;</button>
+    </div>
+
+    <form id="homeworkForm" class="modal-form">
+      <input type="hidden" id="homeworkId">
+
+      <div class="field">
+        <span class="field-label">Type</span>
+        <div class="segmented" id="homeworkTypeSegmented">
+          <button type="button" class="segmented-btn is-active" data-hwtype="devoir">Devoir</button>
+          <button type="button" class="segmented-btn" data-hwtype="evaluation">Évaluation</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="field-label">Matière</span>
+        <div class="chip-toggle-grid" id="homeworkSubjectGrid"></div>
+      </div>
+
+      <label class="field">
+        <span class="field-label">Titre / description</span>
+        <input type="text" id="homeworkTitle" placeholder="Ex : Exercices 12 à 15 p.34" required maxlength="80">
+      </label>
+
+      <label class="field">
+        <span class="field-label">À rendre / prévu le</span>
+        <input type="date" id="homeworkDueDate" required>
+      </label>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-text hidden" id="deleteHomeworkBtn">Supprimer</button>
+        <div class="modal-actions-right">
+          <button type="button" class="btn btn-secondary" id="cancelHomeworkBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODALE : AJOUT / EDITION NOTE -->
+<div class="modal-overlay hidden" id="gradeModalOverlay">
+  <div class="modal" role="dialog" aria-modal="true" aria-labelledby="gradeModalTitle">
+    <div class="modal-head">
+      <h3 id="gradeModalTitle">Nouvelle note</h3>
+      <button class="modal-close" id="gradeModalClose" type="button" aria-label="Fermer">&times;</button>
+    </div>
+
+    <form id="gradeForm" class="modal-form">
+      <input type="hidden" id="gradeId">
+
+      <div class="field">
+        <span class="field-label">Matière</span>
+        <div class="chip-toggle-grid" id="gradeSubjectGrid"></div>
+      </div>
+
+      <label class="field">
+        <span class="field-label">Intitulé (facultatif)</span>
+        <input type="text" id="gradeTitle" placeholder="Ex : Contrôle chapitre 3" maxlength="60">
+      </label>
+
+      <div class="field field-row">
+        <label class="field">
+          <span class="field-label">Note obtenue</span>
+          <input type="number" id="gradeValue" min="0" step="0.25" required>
+        </label>
+        <label class="field">
+          <span class="field-label">Sur combien de points</span>
+          <input type="number" id="gradeMaxPoints" min="1" step="0.5" value="20" required>
+        </label>
+      </div>
+
+      <div class="field field-row">
+        <label class="field">
+          <span class="field-label">Coefficient</span>
+          <input type="number" id="gradeCoefficient" min="0.25" step="0.25" value="1">
+        </label>
+        <label class="field">
+          <span class="field-label">Date</span>
+          <input type="date" id="gradeDate">
+        </label>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-text hidden" id="deleteGradeBtn">Supprimer</button>
+        <div class="modal-actions-right">
+          <button type="button" class="btn btn-secondary" id="cancelGradeBtn">Annuler</button>
+          <button type="submit" class="btn btn-primary">Enregistrer</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- MODALE : AJOUT / EDITION MATIÈRE -->
+<div class="modal-overlay hidden" id="subjectModalOverlay">
+  <div class="modal modal-small" role="dialog" aria-modal="true" aria-labelledby="subjectModalTitle">
+    <div class="modal-head">
+      <h3 id="subjectModalTitle">Nouvelle matière</h3>
+      <button class="modal-close" id="subjectModalClose" type="button" aria-label="Fermer">&times;</button>
+    </div>
+
+    <form id="subjectForm" class="modal-form">
+      <input type="hidden" id="subjectId">
+
+      <label class="field">
+        <span class="field-label">Nom de la matière</span>
+        <input type="text" id="subjectName" placeholder="Ex : Mathématiques" required maxlength="30">
+      </label>
+
+      <div class="field">
+        <span class="field-label">Couleur</span>
+        <div class="color-grid" id="subjectColorGrid"></div>
+        <input type="hidden" id="subjectColor">
+      </div>
+
+      <label class="field">
+        <span class="field-label">Coefficient</span>
+        <input type="number" id="subjectCoefficient" min="0.25" step="0.25" value="1">
+      </label>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-text hidden" id="deleteSubjectBtn">Supprimer</button>
+        <div class="modal-actions-right">
+          <button type="button" class="btn btn-secondary" id="cancelSubjectBtn">Annuler</button>
           <button type="submit" class="btn btn-primary">Enregistrer</button>
         </div>
       </div>
