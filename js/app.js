@@ -322,6 +322,8 @@
     currentScolaireSubview = btn.dataset.subview;
     document.querySelectorAll('.subtab-btn').forEach(b => b.classList.toggle('is-active', b === btn));
     document.querySelectorAll('.subview').forEach(sv => sv.classList.toggle('is-active', sv.id === `subview-${currentScolaireSubview}`));
+    // Une note Tomuss supprimée depuis l'onglet Notes change le compteur affiché ici.
+    if(currentScolaireSubview === 'tomuss') UI.renderScolaireTomuss();
   });
 
   /* ---------- Modale : Devoir / Évaluation ---------- */
@@ -583,6 +585,185 @@
       UI.renderScolaireView();
       UI.showToast('Données scolaires réinitialisées');
     }
+  });
+
+  /* =========================================================
+     SCOLAIRE — Tomuss : synchronisation des notes (flux RSS)
+     Récupération → analyse → vérification par l'utilisateur → import.
+     ========================================================= */
+  let tomussReport = null;
+
+  const tomussFeedInput = document.getElementById('tomussFeedUrl');
+  const tomussProxyInput = document.getElementById('tomussProxyUrl');
+  const tomussReviewBox = document.getElementById('tomussReview');
+
+  function setTomussStatus(text, tone){
+    const el = document.getElementById('tomussStatus');
+    el.textContent = text;
+    el.className = 'tomuss-status' + (tone ? ` is-${tone}` : '');
+  }
+
+  function saveTomussSettings(){
+    Store.setTomussSettings({ feedUrl: tomussFeedInput.value, proxyUrl: tomussProxyInput.value });
+  }
+
+  tomussFeedInput.addEventListener('change', saveTomussSettings);
+  tomussProxyInput.addEventListener('change', saveTomussSettings);
+
+  // Point d'entrée commun : flux récupéré, collé ou lu depuis un fichier.
+  function processTomussText(text){
+    let items;
+    try{
+      items = Tomuss.parseFeed(text);
+    }catch(err){
+      setTomussStatus(err.message, 'error');
+      return;
+    }
+
+    Store.markTomussSynced();
+    tomussReport = Tomuss.analyse(items);
+    UI.renderScolaireTomuss();
+    UI.renderTomussReview(tomussReport);
+
+    const pending = tomussReport.groups.reduce((n, g) => n + g.entries.length, 0);
+    if(!items.length){
+      setTomussStatus('Le flux ne contient encore aucune note.', 'ok');
+    }else if(pending){
+      setTomussStatus('Flux lu. Vérifie les notes ci-dessous avant de les importer.', 'ok');
+    }else{
+      setTomussStatus('Flux lu.', 'ok');
+    }
+  }
+
+  async function runTomussSync(){
+    const url = tomussFeedInput.value.trim();
+    if(!/^https?:\/\//i.test(url)){
+      setTomussStatus('Colle d\'abord le lien du flux RSS (il commence par https://).', 'error');
+      tomussFeedInput.focus();
+      return;
+    }
+    saveTomussSettings();
+
+    const btn = document.getElementById('tomussSyncBtn');
+    btn.disabled = true;
+    btn.textContent = 'Synchronisation…';
+    setTomussStatus('Récupération du flux…');
+
+    try{
+      const text = await Tomuss.fetchFeed(url, Store.getTomuss().proxyUrl);
+      processTomussText(text);
+    }catch(err){
+      console.error('Tomuss :', err);
+      if(err.status){
+        setTomussStatus(`Tomuss a répondu avec l'erreur ${err.status}. Vérifie le lien du flux.`, 'error');
+      }else{
+        setTomussStatus('Le navigateur n\'a pas pu joindre Tomuss (accès bloqué ou hors ligne). Colle le contenu du flux ou charge le fichier ci-dessous.', 'error');
+        document.getElementById('tomussManualCard').classList.remove('hidden');
+      }
+    }finally{
+      btn.disabled = false;
+      btn.textContent = 'Synchroniser';
+    }
+  }
+
+  document.getElementById('tomussSyncBtn').addEventListener('click', runTomussSync);
+
+  document.getElementById('tomussManualToggleBtn').addEventListener('click', () => {
+    document.getElementById('tomussManualCard').classList.toggle('hidden');
+  });
+
+  document.getElementById('tomussAnalysePasteBtn').addEventListener('click', () => {
+    const text = document.getElementById('tomussPasteArea').value;
+    if(!text.trim()){
+      setTomussStatus('Colle d\'abord le contenu du flux.', 'error');
+      return;
+    }
+    processTomussText(text);
+  });
+
+  document.getElementById('tomussFileInput').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => processTomussText(String(reader.result));
+    reader.onerror = () => setTomussStatus('Impossible de lire ce fichier.', 'error');
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+
+  document.getElementById('tomussRestoreDismissedBtn').addEventListener('click', () => {
+    Store.clearTomussDismissed();
+    UI.renderScolaireTomuss();
+    UI.showToast('Ces notes seront reproposées à la prochaine synchronisation');
+  });
+
+  function importTomussSelection(){
+    if(!tomussReport) return;
+
+    const entries = [];
+    tomussReport.groups.forEach((g, gi) => {
+      const picked = g.entries
+        .map((e, ei) => ({ e, ei }))
+        .filter(({ ei }) => {
+          const box = tomussReviewBox.querySelector(`[data-tomuss-pick="${gi}:${ei}"]`);
+          return box && box.checked;
+        });
+      if(!picked.length) return;
+
+      // La matière n'est créée que si au moins une nouvelle note en a besoin.
+      let subjectId = tomussReviewBox.querySelector(`[data-tomuss-subject="${gi}"]`).value;
+      const needsSubject = picked.some(({ e }) => e.status === 'new');
+      if(subjectId === Tomuss.NEW_SUBJECT){
+        if(!needsSubject) return;
+        subjectId = Store.addSubject({
+          name: g.newSubjectName,
+          color: SUBJECT_COLORS[Store.getSubjects().length % SUBJECT_COLORS.length],
+          coefficient: 1,
+        }).id;
+      }
+      Store.setTomussSubjectId(g.ue, subjectId);
+
+      picked.forEach(({ e, ei }) => {
+        const coefInput = tomussReviewBox.querySelector(`[data-tomuss-coef="${gi}:${ei}"]`);
+        entries.push({
+          key: e.key, ue: e.ue, value: e.value, max: e.max, date: e.date,
+          title: e.column,
+          subjectId,
+          coefficient: coefInput ? Number(coefInput.value) || 1 : 1,
+          existingId: e.existingId,
+        });
+      });
+    });
+
+    if(!entries.length){
+      UI.showToast('Aucune note sélectionnée');
+      return;
+    }
+
+    const { added, updated } = Store.applyTomussImport(entries);
+    tomussReport = null;
+    UI.renderTomussReview(null);
+    UI.renderScolaireView();
+
+    const parts = [];
+    if(added) parts.push(`${added} ajoutée${added > 1 ? 's' : ''}`);
+    if(updated) parts.push(`${updated} mise${updated > 1 ? 's' : ''} à jour`);
+    setTomussStatus(`Import terminé : ${parts.join(', ')}.`, 'ok');
+    UI.showToast('Notes Tomuss importées');
+  }
+
+  tomussReviewBox.addEventListener('click', (e) => {
+    if(e.target.closest('[data-tomuss-import]')){
+      importTomussSelection();
+    }else if(e.target.closest('[data-tomuss-cancel]')){
+      tomussReport = null;
+      UI.renderTomussReview(null);
+      setTomussStatus('Import annulé.');
+    }
+  });
+
+  tomussReviewBox.addEventListener('change', (e) => {
+    if(e.target.matches('[data-tomuss-pick]')) UI.refreshTomussSelection();
   });
 
   /* ---------- Raccourcis clavier ---------- */

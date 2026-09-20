@@ -177,6 +177,7 @@
       <div class="subtabs" id="scolaireSubtabs">
         <button class="subtab-btn is-active" data-subview="devoirs" type="button">Devoirs</button>
         <button class="subtab-btn" data-subview="notes" type="button">Notes</button>
+        <button class="subtab-btn" data-subview="tomuss" type="button">Tomuss</button>
         <button class="subtab-btn" data-subview="parametres" type="button">Paramètres</button>
       </div>
 
@@ -215,6 +216,56 @@
 
         <div id="subjectGradesList"></div>
         <p class="empty-state hidden" id="notesEmptyState">Ajoute une matière dans Paramètres pour commencer.</p>
+      </div>
+
+      <!-- SOUS-VUE : TOMUSS (synchronisation des notes via le flux RSS) -->
+      <div class="subview" id="subview-tomuss">
+        <div class="section-head">
+          <h2>Synchronisation Tomuss</h2>
+        </div>
+
+        <div class="tomuss-card">
+          <label class="field">
+            <span class="field-label">Lien du flux RSS</span>
+            <input type="url" id="tomussFeedUrl" placeholder="https://tomuss.univ-lyon1.fr/…/rss/…" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </label>
+          <p class="tomuss-hint">Ce lien est personnel : il reste enregistré dans ce navigateur uniquement. Ne le partage pas.</p>
+
+          <div class="tomuss-actions">
+            <button class="btn btn-primary" id="tomussSyncBtn" type="button">Synchroniser</button>
+            <button class="btn btn-secondary" id="tomussManualToggleBtn" type="button">Importer à la main</button>
+          </div>
+
+          <p class="tomuss-status" id="tomussStatus" role="status"></p>
+          <p class="tomuss-hint" id="tomussLastSync"></p>
+          <p class="tomuss-hint hidden" id="tomussDismissedRow">
+            <span id="tomussDismissedText"></span>
+            <button class="link-btn" id="tomussRestoreDismissedBtn" type="button">Les reproposer</button>
+          </p>
+
+          <details class="tomuss-advanced">
+            <summary>Options avancées</summary>
+            <label class="field">
+              <span class="field-label">Proxy CORS (facultatif)</span>
+              <input type="url" id="tomussProxyUrl" placeholder="https://mon-proxy.exemple.workers.dev/?url=" autocomplete="off" autocapitalize="off" spellcheck="false">
+            </label>
+            <p class="tomuss-hint">Si le navigateur bloque l'accès direct à Tomuss, indique l'adresse de ton propre proxy : le lien du flux y sera ajouté à la fin. Un proxy public verrait ton lien personnel.</p>
+          </details>
+        </div>
+
+        <div class="tomuss-card hidden" id="tomussManualCard">
+          <p class="tomuss-hint">Ouvre le lien du flux dans un onglet, copie tout son contenu et colle-le ici, ou charge le fichier enregistré (.txt ou .xml).</p>
+          <textarea id="tomussPasteArea" rows="6" placeholder="&lt;?xml version=&quot;1.0&quot;…" spellcheck="false"></textarea>
+          <div class="tomuss-actions">
+            <button class="btn btn-primary" id="tomussAnalysePasteBtn" type="button">Analyser</button>
+            <label class="btn btn-secondary tomuss-file-btn">
+              Choisir un fichier
+              <input type="file" id="tomussFileInput" class="hidden" accept=".txt,.xml,.rss,text/xml,application/xml,text/plain">
+            </label>
+          </div>
+        </div>
+
+        <div class="hidden" id="tomussReview"></div>
       </div>
 
       <!-- SOUS-VUE : PARAMÈTRES (matières) -->
@@ -482,6 +533,7 @@
 <script src="js/storage.js"></script>
 <script src="js/recurrence.js"></script>
 <script src="js/state.js"></script>
+<script src="js/tomuss.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/ui.js"></script>
 <script src="js/app.js"></script>

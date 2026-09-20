@@ -56,12 +56,12 @@ h1, h2, h3{
 
 p{ margin: 0; }
 
-button, input{ font-family: inherit; }
+button, input, textarea, select{ font-family: inherit; }
 
 .hidden{ display: none !important; }
 
 /* focus visibility */
-a:focus-visible, button:focus-visible, input:focus-visible{
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, summary:focus-visible{
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }
@@ -663,6 +663,7 @@ a:focus-visible, button:focus-visible, input:focus-visible{
   color: var(--color-text-soft);
 }
 .tag.tag-primary{ background: var(--color-primary-light); color: var(--color-primary-dark); }
+.tag.tag-warning{ background: #FDF1DA; color: #8A5A05; }
 
 .chevron{ color: var(--color-text-faint); flex-shrink: 0; }
 
@@ -849,6 +850,106 @@ a:focus-visible, button:focus-visible, input:focus-visible{
 .grade-row-value-conv{ font-size: 11px; color: var(--color-text-faint); font-weight: 500; white-space: nowrap; }
 
 /* =========================================================
+   SCOLAIRE — Tomuss (synchronisation des notes)
+   ========================================================= */
+.tomuss-card{
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 16px;
+}
+
+.tomuss-hint{ font-size: 12.5px; line-height: 1.5; color: var(--color-text-faint); }
+.tomuss-done{ font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--color-success); }
+
+.tomuss-actions{ display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+.tomuss-status{ font-size: 13.5px; line-height: 1.5; color: var(--color-text-soft); }
+.tomuss-status:empty{ display: none; }
+.tomuss-status.is-ok{ color: var(--color-success); }
+.tomuss-status.is-error{ color: var(--color-danger); }
+
+.tomuss-file-btn{ display: inline-block; }
+
+.tomuss-advanced summary,
+.tomuss-ignored summary{
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-soft);
+}
+.tomuss-advanced[open] summary{ margin-bottom: 12px; }
+.tomuss-advanced .tomuss-hint{ margin-top: 8px; }
+
+.tomuss-ignored{ margin: 4px 0 16px; }
+.tomuss-ignored ul{
+  margin: 10px 0 0;
+  padding-left: 18px;
+  font-size: 12.5px;
+  color: var(--color-text-faint);
+  line-height: 1.7;
+}
+
+.tomuss-group{
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 18px 20px 8px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 14px;
+}
+
+.tomuss-group-head{
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  margin-bottom: 8px;
+}
+.tomuss-group-name{ font-family: var(--font-display); font-weight: 700; font-size: 16px; }
+.tomuss-group-code{ font-size: 12px; color: var(--color-text-faint); margin-top: 2px; }
+
+.tomuss-subject-pick{
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 260px;
+  max-width: 400px;
+}
+.tomuss-subject-pick select{ padding: 8px 10px; font-size: 13.5px; }
+
+.tomuss-row{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--color-border);
+}
+.tomuss-check{ width: 18px; height: 18px; flex-shrink: 0; cursor: pointer; }
+.tomuss-row-body{ flex: 1; min-width: 0; }
+.tomuss-row-body .grade-row-meta{ display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+.tomuss-coef{
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex-shrink: 0;
+  width: 68px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-faint);
+}
+.tomuss-coef input{ padding: 6px 8px; font-size: 13.5px; }
+
+.tomuss-review-actions{ margin: 6px 0 4px; }
+
+/* =========================================================
    SCOLAIRE — sélecteur de couleur (matières)
    ========================================================= */
 .color-grid{
@@ -937,7 +1038,7 @@ a:focus-visible, button:focus-visible, input:focus-visible{
   color: var(--color-text-soft);
 }
 
-input[type="text"], input[type="number"], input[type="date"]{
+input[type="text"], input[type="number"], input[type="date"], input[type="url"], textarea, select{
   border: 1.5px solid var(--color-border);
   border-radius: var(--radius-sm);
   padding: 10px 12px;
@@ -946,7 +1047,10 @@ input[type="text"], input[type="number"], input[type="date"]{
   background: #fff;
   width: 100%;
 }
-input:focus{ border-color: var(--color-primary); outline: none; }
+input:focus, textarea:focus, select:focus{ border-color: var(--color-primary); outline: none; }
+
+textarea{ resize: vertical; line-height: 1.45; font-size: 13px; }
+input[type="checkbox"]{ accent-color: var(--color-primary); }
 
 .icon-grid{
   display: grid;
@@ -1139,6 +1243,16 @@ input:focus{ border-color: var(--color-primary); outline: none; }
 }
 
 @media (max-width: 420px){
+  .subtab-btn{ padding: 9px 8px; font-size: 13px; }
+
+  .tomuss-card{ padding: 18px; }
+  .tomuss-group{ padding: 16px 16px 6px; }
+  .tomuss-subject-pick{ max-width: none; }
+  .tomuss-row{ flex-wrap: wrap; }
+  .tomuss-coef--empty{ display: none; }
+  .tomuss-coef{ flex-direction: row; align-items: center; width: 100%; padding-left: 30px; }
+  .tomuss-coef input{ width: 80px; }
+
   .stats-grid{ grid-template-columns: 1fr 1fr; }
   .modal{ padding: 20px; }
 

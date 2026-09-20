@@ -355,11 +355,12 @@ const UI = (function(){
               ? `<div class="grade-row-value-conv">≈ ${((g.value / g.maxPoints) * 20).toFixed(1)}/20</div>`
               : '';
             const coeffLabel = g.coefficient !== 1 ? ` · coeff. ${g.coefficient}` : '';
+            const sourceLabel = g.tomuss ? ' · Tomuss' : '';
             return `
               <div class="grade-row" data-grade-id="${g.id}">
                 <div class="grade-row-body">
                   <p class="grade-row-title">${escapeHtml(g.title || 'Note')}</p>
-                  <p class="grade-row-meta">${formatDateShort(g.date)}${coeffLabel}</p>
+                  <p class="grade-row-meta">${formatDateShort(g.date)}${coeffLabel}${sourceLabel}</p>
                 </div>
                 <div class="grade-row-value-wrap">
                   <div class="grade-row-value">${g.value}/${g.maxPoints}</div>
@@ -411,9 +412,150 @@ const UI = (function(){
     `).join('');
   }
 
+  /* ---------- Vue : Scolaire — Tomuss (synchronisation des notes) ---------- */
+  function formatSyncDate(iso){
+    if(!iso) return 'Pas encore synchronisé.';
+    const d = new Date(iso);
+    const day = d.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    const time = d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    return `Dernière synchronisation : ${day} à ${time}.`;
+  }
+
+  function pluralNotes(n){ return `${n} note${n > 1 ? 's' : ''}`; }
+
+  // Réglages + dernière synchro. Ne touche pas à la zone de vérification.
+  function renderScolaireTomuss(){
+    const cfg = Store.getTomuss();
+
+    const urlInput = document.getElementById('tomussFeedUrl');
+    const proxyInput = document.getElementById('tomussProxyUrl');
+    if(document.activeElement !== urlInput) urlInput.value = cfg.feedUrl || '';
+    if(document.activeElement !== proxyInput) proxyInput.value = cfg.proxyUrl || '';
+
+    document.getElementById('tomussLastSync').textContent = formatSyncDate(cfg.lastSync);
+
+    const dismissed = Store.countTomussDismissed();
+    const row = document.getElementById('tomussDismissedRow');
+    row.classList.toggle('hidden', dismissed === 0);
+    document.getElementById('tomussDismissedText').textContent = dismissed > 1
+      ? `${dismissed} notes supprimées ne sont plus proposées.`
+      : `${dismissed} note supprimée n'est plus proposée.`;
+  }
+
+  // Zone de vérification : une carte par UE, une ligne par note à importer.
+  // Les cases et champs sont retrouvés par leur position (groupe:ligne) dans le rapport.
+  function renderTomussReview(report){
+    const box = document.getElementById('tomussReview');
+    if(!report){
+      box.classList.add('hidden');
+      box.innerHTML = '';
+      return;
+    }
+    box.classList.remove('hidden');
+
+    const total = report.groups.reduce((n, g) => n + g.entries.length, 0);
+    const facts = [`${report.read} élément${report.read > 1 ? 's' : ''} lu${report.read > 1 ? 's' : ''}`];
+    if(report.upToDate) facts.push(`${report.upToDate} déjà à jour`);
+    if(report.ignored.length) facts.push(`${report.ignored.length} sans note chiffrée`);
+
+    const ignoredHtml = report.ignored.length ? `
+      <details class="tomuss-ignored">
+        <summary>Voir les éléments ignorés</summary>
+        <ul>${report.ignored.map(it => `<li>${escapeHtml(it.ueName)} — ${escapeHtml(it.column)} : ${escapeHtml(it.raw)}</li>`).join('')}</ul>
+      </details>` : '';
+
+    if(!total){
+      box.innerHTML = `
+        <div class="tomuss-card">
+          <p class="tomuss-done">Tout est à jour, rien à importer.</p>
+          <p class="tomuss-hint">${escapeHtml(facts.join(' · '))}</p>
+          ${ignoredHtml}
+        </div>`;
+      return;
+    }
+
+    const subjects = Store.getSubjects();
+
+    const groupsHtml = report.groups.map((g, gi) => {
+      const options = [
+        `<option value="${Tomuss.NEW_SUBJECT}" ${g.subjectId === Tomuss.NEW_SUBJECT ? 'selected' : ''}>Nouvelle : ${escapeHtml(g.newSubjectName)}</option>`,
+        ...subjects.map(s => `<option value="${s.id}" ${s.id === g.subjectId ? 'selected' : ''}>${escapeHtml(s.name)}</option>`),
+      ].join('');
+
+      const rows = g.entries.map((e, ei) => {
+        const pos = `${gi}:${ei}`;
+        const converted = e.max !== 20
+          ? `<div class="grade-row-value-conv">≈ ${((e.value / e.max) * 20).toFixed(1)}/20</div>`
+          : '';
+        const badge = e.status === 'updated'
+          ? `<span class="tag tag-warning">Modifiée · avant ${e.previous.value}/${e.previous.max}</span>`
+          : '<span class="tag tag-primary">Nouvelle</span>';
+        const coef = e.status === 'new' ? `
+          <label class="tomuss-coef">
+            <span>Coeff.</span>
+            <input type="number" min="0.25" step="0.25" value="1" data-tomuss-coef="${pos}">
+          </label>` : '<span class="tomuss-coef tomuss-coef--empty" aria-hidden="true"></span>';
+
+        return `
+          <div class="tomuss-row">
+            <input type="checkbox" class="tomuss-check" checked data-tomuss-pick="${pos}" aria-label="Importer cette note">
+            <div class="tomuss-row-body">
+              <p class="grade-row-title">${escapeHtml(e.column)}</p>
+              <p class="grade-row-meta">${formatDateShort(e.date)} ${badge}</p>
+            </div>
+            <div class="grade-row-value-wrap">
+              <div class="grade-row-value">${e.value}/${e.max}</div>
+              ${converted}
+            </div>
+            ${coef}
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="tomuss-group">
+          <div class="tomuss-group-head">
+            <div>
+              <p class="tomuss-group-name">${escapeHtml(g.ueName)}</p>
+              <p class="tomuss-group-code">${escapeHtml(g.ue)}</p>
+            </div>
+            <label class="tomuss-subject-pick">
+              <span class="field-label">Matière</span>
+              <select data-tomuss-subject="${gi}">${options}</select>
+            </label>
+          </div>
+          ${rows}
+        </div>`;
+    }).join('');
+
+    box.innerHTML = `
+      <div class="section-head">
+        <h3>${pluralNotes(total)} à vérifier</h3>
+        <span class="tomuss-hint">${escapeHtml(facts.join(' · '))}</span>
+      </div>
+      ${groupsHtml}
+      ${ignoredHtml}
+      <div class="tomuss-actions tomuss-review-actions">
+        <button class="btn btn-primary" id="tomussImportBtn" type="button" data-tomuss-import></button>
+        <button class="btn btn-text" type="button" data-tomuss-cancel>Annuler</button>
+      </div>`;
+
+    refreshTomussSelection();
+  }
+
+  // Met à jour le libellé du bouton d'import selon les cases cochées.
+  function refreshTomussSelection(){
+    const box = document.getElementById('tomussReview');
+    const btn = document.getElementById('tomussImportBtn');
+    if(!btn) return;
+    const n = box.querySelectorAll('[data-tomuss-pick]:checked').length;
+    btn.disabled = n === 0;
+    btn.textContent = n === 0 ? 'Aucune note sélectionnée' : `Importer ${pluralNotes(n)}`;
+  }
+
   function renderScolaireView(){
     renderScolaireDevoirs();
     renderScolaireNotes();
+    renderScolaireTomuss();
     renderScolaireParametres();
   }
 
@@ -505,6 +647,7 @@ const UI = (function(){
     escapeHtml, updateTopbar, showToast,
     renderToday, renderTodoView, renderDashboard, renderTasksView, showProfilePrompt,
     renderScolaireView, renderScolaireDevoirs, renderScolaireNotes, renderScolaireParametres,
+    renderScolaireTomuss, renderTomussReview, refreshTomussSelection,
     buildIconGrid, buildProfileChipGrid, buildSingleChipGrid, buildDayToggleGrid, buildColorGrid,
   };
 })();

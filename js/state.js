@@ -299,6 +299,9 @@ const Store = (function(){
     data.subjects = data.subjects.filter(s => s.id !== id);
     data.homework = data.homework.filter(h => h.subjectId !== id);
     data.grades = data.grades.filter(g => g.subjectId !== id);
+    Object.keys(data.tomuss.ueMap).forEach(ue => {
+      if(data.tomuss.ueMap[ue] === id) delete data.tomuss.ueMap[ue];
+    });
     persist();
   }
 
@@ -395,7 +398,12 @@ const Store = (function(){
   }
 
   function deleteGrade(id){
-    data.grades = data.grades.filter(g => g.id !== id);
+    const g = getGrade(id);
+    // Une note venue de Tomuss qu'on supprime ne doit pas revenir à chaque synchronisation.
+    if(g && g.tomuss){
+      data.tomuss.dismissed[g.tomuss.key] = tomussSignature(g.tomuss.value, g.tomuss.max);
+    }
+    data.grades = data.grades.filter(x => x.id !== id);
     persist();
   }
 
@@ -428,10 +436,95 @@ const Store = (function(){
     return weightedSum / coeffSum;
   }
 
+  /* ---------- Scolaire : synchronisation Tomuss ---------- */
+  function tomussSignature(value, max){ return `${value}/${max}`; }
+
+  function getTomuss(){ return data.tomuss; }
+
+  function setTomussSettings({ feedUrl, proxyUrl }){
+    if(typeof feedUrl === 'string') data.tomuss.feedUrl = feedUrl.trim();
+    if(typeof proxyUrl === 'string') data.tomuss.proxyUrl = proxyUrl.trim();
+    persist();
+  }
+
+  function markTomussSynced(){
+    data.tomuss.lastSync = new Date().toISOString();
+    persist();
+  }
+
+  // Matière associée à un code UE Tomuss (null si jamais associée ou si la matière a été supprimée).
+  function getTomussSubjectId(ue){
+    const id = data.tomuss.ueMap[ue];
+    return id && getSubject(id) ? id : null;
+  }
+
+  function setTomussSubjectId(ue, subjectId){
+    data.tomuss.ueMap[ue] = subjectId;
+    persist();
+  }
+
+  function findGradeByTomussKey(key){
+    return data.grades.find(g => g.tomuss && g.tomuss.key === key) || null;
+  }
+
+  function isTomussDismissed(key, signature){
+    return data.tomuss.dismissed[key] === signature;
+  }
+
+  function countTomussDismissed(){ return Object.keys(data.tomuss.dismissed).length; }
+
+  function clearTomussDismissed(){
+    data.tomuss.dismissed = {};
+    persist();
+  }
+
+  // Applique les notes validées à l'écran de vérification.
+  // entry = { key, ue, value, max, date, title, subjectId, coefficient, existingId }
+  // - sans existingId : nouvelle note ; avec existingId : la note locale est mise à jour
+  //   (matière, intitulé et coefficient choisis par l'utilisateur sont conservés).
+  function applyTomussImport(entries){
+    let added = 0, updated = 0;
+    const now = new Date().toISOString();
+
+    entries.forEach(e => {
+      const meta = { key: e.key, ue: e.ue, value: e.value, max: e.max, syncedAt: now };
+      if(e.existingId){
+        const g = getGrade(e.existingId);
+        if(!g) return;
+        g.value = e.value;
+        g.maxPoints = e.max;
+        g.date = e.date || g.date;
+        g.tomuss = meta;
+        updated++;
+      }else{
+        data.grades.push({
+          id: uid('grade'),
+          subjectId: e.subjectId,
+          title: e.title,
+          value: e.value,
+          maxPoints: e.max,
+          coefficient: Number(e.coefficient) || 1,
+          date: e.date || todayISO(),
+          createdAt: todayISO(),
+          tomuss: meta,
+        });
+        added++;
+      }
+      delete data.tomuss.dismissed[e.key];
+    });
+
+    persist();
+    return { added, updated };
+  }
+
   function resetSchoolData(){
     data.subjects = [];
     data.homework = [];
     data.grades = [];
+    // Le lien du flux est conservé ; les associations UE -> matière ne veulent plus rien dire.
+    data.tomuss.ueMap = {};
+    data.tomuss.dismissed = {};
+    data.tomuss.lastSync = null;
     persist();
   }
 
@@ -453,6 +546,8 @@ const Store = (function(){
     deleteHomework, isHomeworkActive, clearDoneHomework,
     getGrades, getGrade, gradesForSubject, addGrade, updateGrade, deleteGrade,
     subjectAverage, overallAverage, resetSchoolData,
+    getTomuss, setTomussSettings, markTomussSynced, getTomussSubjectId, setTomussSubjectId,
+    findGradeByTomussKey, isTomussDismissed, countTomussDismissed, clearTomussDismissed, applyTomussImport,
     resetAll,
   };
 })();

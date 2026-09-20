@@ -22,6 +22,12 @@ function uid(prefix){
   return `${prefix}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`;
 }
 
+// Réglages de la synchronisation Tomuss (flux RSS des notes).
+// ueMap : code UE Tomuss -> id de matière locale ; dismissed : notes supprimées à ne pas reproposer.
+function defaultTomuss(){
+  return { feedUrl: '', proxyUrl: '', ueMap: {}, dismissed: {}, lastSync: null };
+}
+
 function seedData(){
   const pereId = uid('prof');
   const mereId = uid('prof');
@@ -123,6 +129,7 @@ function seedData(){
         createdAt: todayISO(),
       },
     ],
+    tomuss: defaultTomuss(),
   };
 }
 
@@ -137,6 +144,10 @@ function loadData(){
     if(!Array.isArray(parsed.subjects)) parsed.subjects = [];
     if(!Array.isArray(parsed.homework)) parsed.homework = [];
     if(!Array.isArray(parsed.grades)) parsed.grades = [];
+    // Migration : anciennes données sans la synchronisation Tomuss.
+    parsed.tomuss = Object.assign(defaultTomuss(), parsed.tomuss || {});
+    if(!parsed.tomuss.ueMap || typeof parsed.tomuss.ueMap !== 'object') parsed.tomuss.ueMap = {};
+    if(!parsed.tomuss.dismissed || typeof parsed.tomuss.dismissed !== 'object') parsed.tomuss.dismissed = {};
     return parsed;
   }catch(e){
     console.error('Erreur de lecture des données locales, réinitialisation.', e);
