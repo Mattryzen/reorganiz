@@ -272,12 +272,19 @@ const Store = (function(){
 
   function getSubject(id){ return data.subjects.find(s => s.id === id) || null; }
 
-  function addSubject({ name, color, coefficient }){
+  function cleanWeights(w){
+    const out = {};
+    Object.keys(w || {}).forEach(k => { const v = Number(w[k]); if(v > 0) out[k] = v; });
+    return out;
+  }
+
+  function addSubject({ name, color, coefficient, ueWeights }){
     const subject = {
       id: uid('subj'),
       name: name.trim(),
       color: color || SUBJECT_COLORS[0],
       coefficient: coefficient || 1,
+      ueWeights: cleanWeights(ueWeights),
       createdAt: todayISO(),
     };
     data.subjects.push(subject);
@@ -285,12 +292,13 @@ const Store = (function(){
     return subject;
   }
 
-  function updateSubject(id, { name, color, coefficient }){
+  function updateSubject(id, { name, color, coefficient, ueWeights }){
     const s = getSubject(id);
     if(!s) return null;
     s.name = name.trim();
     s.color = color || s.color;
     s.coefficient = coefficient || 1;
+    if(ueWeights) s.ueWeights = cleanWeights(ueWeights);
     persist();
     return s;
   }
@@ -364,8 +372,9 @@ const Store = (function(){
 
   function getGrade(id){ return data.grades.find(g => g.id === id) || null; }
 
-  function gradesForSubject(subjectId){
-    return data.grades.filter(g => g.subjectId === subjectId);
+  // semester (1 ou 2) facultatif : ne garde que les notes datées dans ce semestre.
+  function gradesForSubject(subjectId, semester){
+    return data.grades.filter(g => g.subjectId === subjectId && (!semester || semesterOfDate(g.date) === semester));
   }
 
   function addGrade({ subjectId, title, value, maxPoints, coefficient, date }){
@@ -408,8 +417,8 @@ const Store = (function(){
   }
 
   // Moyenne d'une matière : chaque note est ramenée sur 20, puis pondérée par son coefficient.
-  function subjectAverage(subjectId){
-    const grades = gradesForSubject(subjectId);
+  function subjectAverage(subjectId, semester){
+    const grades = gradesForSubject(subjectId, semester);
     if(!grades.length) return null;
     let weightedSum = 0, coeffSum = 0;
     grades.forEach(g => {
@@ -434,6 +443,28 @@ const Store = (function(){
     });
     if(coeffSum === 0) return null;
     return weightedSum / coeffSum;
+  }
+
+  // Moyenne d'une UE : moyenne des matières/SAÉ pondérées par leur poids dans l'UE (tableau du BUT).
+  // Seules les matières déjà notées comptent ; coverage = part du poids total de l'UE déjà notée.
+  function ueAverage(ue, semester){
+    let sum = 0, wSum = 0, wTotal = 0;
+    data.subjects.forEach(s => {
+      const w = Number((s.ueWeights || {})[ue]) || 0;
+      if(w <= 0) return;
+      wTotal += w;
+      const avg = subjectAverage(s.id, semester);
+      if(avg === null) return;
+      sum += avg * w;
+      wSum += w;
+    });
+    return { avg: wSum ? sum / wSum : null, coverage: wTotal ? wSum / wTotal : 0, hasSubjects: wTotal > 0 };
+  }
+
+  function applyButPreset(){
+    const r = applyButS1Preset(data, true);
+    persist();
+    return r;
   }
 
   /* ---------- Scolaire : synchronisation Tomuss ---------- */
@@ -545,7 +576,7 @@ const Store = (function(){
     getHomework, getHomeworkItem, addHomework, updateHomework, toggleHomeworkDone,
     deleteHomework, isHomeworkActive, clearDoneHomework,
     getGrades, getGrade, gradesForSubject, addGrade, updateGrade, deleteGrade,
-    subjectAverage, overallAverage, resetSchoolData,
+    subjectAverage, overallAverage, ueAverage, applyButPreset, resetSchoolData,
     getTomuss, setTomussSettings, markTomussSynced, getTomussSubjectId, setTomussSubjectId,
     findGradeByTomussKey, isTomussDismissed, countTomussDismissed, clearTomussDismissed, applyTomussImport,
     resetAll,

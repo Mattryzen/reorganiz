@@ -513,6 +513,19 @@
   });
 
   /* ---------- Modale : Matière ---------- */
+  function renderUeWeightFields(weights){
+    let box = document.getElementById('subjectUeBox');
+    if(!box){
+      box = document.createElement('div');
+      box.id = 'subjectUeBox';
+      box.className = 'field';
+      subjectForm.insertBefore(box, subjectForm.lastElementChild);
+    }
+    box.innerHTML = '<span class="field-label">Poids dans les UE (%)</span>' + [1, 2].map(sem =>
+      `<div class="ue-weights-row"><span class="ue-weights-sem">S${sem}</span>${UES_BY_SEM[sem].map(ue =>
+        `<label class="ue-weight"><span>${ue.replace('UE', '')}</span><input type="number" min="0" max="100" step="0.5" data-ue="${ue}" value="${weights[ue] || ''}"></label>`).join('')}</div>`).join('');
+  }
+
   function openSubjectModal(subjectId){
     editingSubjectId = subjectId || null;
     const subject = subjectId ? Store.getSubject(subjectId) : null;
@@ -521,6 +534,7 @@
     document.getElementById('subjectId').value = subjectId || '';
     document.getElementById('subjectName').value = subject ? subject.name : '';
     document.getElementById('subjectCoefficient').value = subject ? subject.coefficient : 1;
+    renderUeWeightFields(subject ? (subject.ueWeights || {}) : {});
     document.getElementById('deleteSubjectBtn').classList.toggle('hidden', !subject);
 
     const color = subject ? subject.color : SUBJECT_COLORS[Store.getSubjects().length % SUBJECT_COLORS.length];
@@ -552,6 +566,7 @@
       name,
       color: document.getElementById('subjectColor').value,
       coefficient: Number(document.getElementById('subjectCoefficient').value) || 1,
+      ueWeights: Object.fromEntries([...document.querySelectorAll('#subjectUeBox input[data-ue]')].map(i => [i.dataset.ue, Number(i.value) || 0])),
     };
 
     if(editingSubjectId){
@@ -576,6 +591,20 @@
       UI.renderScolaireDevoirs();
       UI.showToast('Matière supprimée');
     }
+  });
+
+  document.getElementById('notesSemesterTabs').addEventListener('click', (e) => {
+    const b = e.target.closest('.semester-btn');
+    if(!b) return;
+    UI.setNotesSemester(Number(b.dataset.sem));
+    UI.renderScolaireNotes();
+  });
+
+  document.getElementById('loadButS1Btn').addEventListener('click', () => {
+    const r = Store.applyButPreset();
+    UI.renderScolaireParametres();
+    UI.renderScolaireNotes();
+    UI.showToast(`Tableau S1 : ${r.matched} matière(s) associée(s), ${r.created} créée(s)`);
   });
 
   /* ---------- Réinitialisation scolaire ---------- */

@@ -28,6 +28,57 @@ function defaultTomuss(){
   return { feedUrl: '', proxyUrl: '', ueMap: {}, dismissed: {}, lastSync: null };
 }
 
+/* ---------- Semestres & UE (BUT Informatique) ---------- */
+const UES_BY_SEM = {
+  1: ['UE1.1','UE1.2','UE1.3','UE1.4','UE1.5','UE1.6'],
+  2: ['UE2.1','UE2.2','UE2.3','UE2.4','UE2.5','UE2.6'],
+};
+// S1 : 2 sept -> 24 janv ; S2 : 25 janv -> 25 juin (les rattrapages de l'été comptent pour S2).
+function semesterOfDate(iso){
+  const md = String(iso || '').slice(5, 10);
+  if(!md) return 1;
+  return (md >= '01-25' && md < '09-02') ? 2 : 1;
+}
+// Tableau des pourcentages du semestre 1 : [code, nom, {UE: %}]
+const BUT_S1 = [
+  ['S1.01','Implémentation',{'UE1.1':40}],
+  ['S1.02',"Comparaison d'algo.",{'UE1.2':40}],
+  ['S1.03','Installation poste',{'UE1.3':40}],
+  ['S1.04','Création BD',{'UE1.4':40}],
+  ['S1.05','Recueil de besoins',{'UE1.5':40}],
+  ['S1.06','Environnement éco.',{'UE1.6':40}],
+  ['R1.01','Initiation au développement',{'UE1.1':41,'UE1.2':24}],
+  ['R1.02',"Développement d'interfaces web",{'UE1.1':11,'UE1.5':20,'UE1.6':5}],
+  ['R1.03','Introduction archi',{'UE1.2':6,'UE1.3':21}],
+  ['R1.04','Introduction systèmes',{'UE1.3':21}],
+  ['R1.05','Introduction BD',{'UE1.4':39}],
+  ['R1.06','Mathématiques discrètes',{'UE1.2':15,'UE1.4':15}],
+  ['R1.07','Outils fondamentaux',{'UE1.2':15}],
+  ['R1.08','Intro Gestion organisation',{'UE1.5':25,'UE1.6':11}],
+  ['R1.09','Intro Economie',{'UE1.4':6,'UE1.6':11}],
+  ['R1.10','Anglais',{'UE1.1':8,'UE1.3':12,'UE1.6':11}],
+  ['R1.11','Bases de la communication',{'UE1.3':6,'UE1.5':15,'UE1.6':11}],
+  ['R1.12','Projet professionnel et personnel',{'UE1.6':11}],
+];
+function normKey(t){ return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+// Associe les poids d'UE aux matières existantes (jamais d'écrasement, jamais de suppression).
+// create = true : crée aussi les matières manquantes.
+function applyButS1Preset(d, create){
+  let matched = 0, created = 0;
+  BUT_S1.forEach(([code, name, w]) => {
+    const kc = normKey(code), kn = normKey(name);
+    const s = d.subjects.find(x => { const k = normKey(x.name); return k.includes(kc) || k === kn || (kn.length > 6 && k.includes(kn)); });
+    if(s){
+      if(!s.ueWeights || !Object.keys(s.ueWeights).length){ s.ueWeights = Object.assign({}, w); matched++; }
+    }else if(create){
+      d.subjects.push({ id: uid('subj'), name: `${code} · ${name}`, color: SUBJECT_COLORS[d.subjects.length % SUBJECT_COLORS.length],
+        coefficient: 1, ueWeights: Object.assign({}, w), createdAt: todayISO() });
+      created++;
+    }
+  });
+  return { matched, created };
+}
+
 function seedData(){
   const pereId = uid('prof');
   const mereId = uid('prof');
@@ -144,6 +195,9 @@ function loadData(){
     if(!Array.isArray(parsed.subjects)) parsed.subjects = [];
     if(!Array.isArray(parsed.homework)) parsed.homework = [];
     if(!Array.isArray(parsed.grades)) parsed.grades = [];
+    // Migration : poids d'UE par matière (les matières et notes existantes sont conservées telles quelles).
+    parsed.subjects.forEach(x => { if(!x.ueWeights || typeof x.ueWeights !== 'object') x.ueWeights = {}; });
+    if(!parsed.butS1Matched){ applyButS1Preset(parsed, false); parsed.butS1Matched = true; }
     // Migration : anciennes données sans la synchronisation Tomuss.
     parsed.tomuss = Object.assign(defaultTomuss(), parsed.tomuss || {});
     if(!parsed.tomuss.ueMap || typeof parsed.tomuss.ueMap !== 'object') parsed.tomuss.ueMap = {};

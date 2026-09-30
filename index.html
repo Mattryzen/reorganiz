@@ -202,15 +202,16 @@
 
       <!-- SOUS-VUE : NOTES -->
       <div class="subview" id="subview-notes">
-        <div class="overall-average-card" id="overallAverageCard">
-          <div>
-            <div class="overall-average-value" id="overallAverageValue">–</div>
-            <div class="overall-average-label">Moyenne générale</div>
-          </div>
+        <div class="subtabs" id="notesSemesterTabs">
+          <button class="semester-btn" data-sem="1" type="button">Semestre 1</button>
+          <button class="semester-btn" data-sem="2" type="button">Semestre 2</button>
         </div>
+        <p class="tomuss-hint" id="semesterRange"></p>
+        <div class="ue-grid" id="ueAveragesGrid"></div>
+        <p class="tomuss-hint hidden" id="ueOrphanHint"></p>
 
         <div class="section-head">
-          <h2>Notes par matière</h2>
+          <h2>Notes par matière / SAÉ</h2>
           <button class="btn btn-primary" id="openAddGradeBtn" type="button">+ Note</button>
         </div>
 
@@ -276,6 +277,7 @@
         </div>
         <div class="profile-manage-list" id="subjectManageList"></div>
         <p class="empty-state hidden" id="subjectsEmptyState">Tu n'as pas encore de matière. Ajoutes-en une pour commencer.</p>
+        <button class="btn btn-secondary" id="loadButS1Btn" type="button">Charger le tableau BUT S1 (poids par UE)</button>
 
         <div class="danger-zone">
           <button class="btn btn-text danger" id="resetSchoolDataBtn" type="button">Réinitialiser les données scolaires</button>

@@ -330,24 +330,40 @@ const UI = (function(){
   }
 
   /* ---------- Vue : Scolaire — Notes ---------- */
-  function renderScolaireNotes(){
-    const subjects = Store.getSubjects();
-    const overall = Store.overallAverage();
-    document.getElementById('overallAverageValue').textContent = overall === null ? '—' : `${overall.toFixed(2)}/20`;
+  let notesSemester = semesterOfDate(todayISO());
+  function setNotesSemester(n){ notesSemester = n; }
 
+  function renderScolaireNotes(){
+    const sem = notesSemester;
+    const allSubjects = Store.getSubjects();
+    const ues = UES_BY_SEM[sem];
+    document.querySelectorAll('.semester-btn').forEach(b => b.classList.toggle('is-active', Number(b.dataset.sem) === sem));
+    document.getElementById('semesterRange').textContent = sem === 1 ? 'Du 2 septembre au 24 janvier' : 'Du 25 janvier au 25 juin';
+
+    // Moyenne par UE (pondérée par les poids du tableau).
+    document.getElementById('ueAveragesGrid').innerHTML = ues.map(ue => {
+      const r = Store.ueAverage(ue, sem);
+      const cls = r.avg === null ? '' : (r.avg >= 10 ? ' ue-ok' : ' ue-low');
+      const sub = !r.hasSubjects ? 'aucune matière' : (r.avg === null ? 'pas de note' : `/20 · ${Math.round(r.coverage * 100)}% noté`);
+      return `<div class="ue-card${cls}"><div class="ue-card-name">${ue}</div><div class="ue-card-avg">${r.avg === null ? '–' : r.avg.toFixed(2)}</div><div class="ue-card-sub">${sub}</div></div>`;
+    }).join('');
+
+    const inSem = (s) => ues.some(ue => Number((s.ueWeights || {})[ue]) > 0);
+    const orphans = allSubjects.filter(s => !inSem(s) && Store.gradesForSubject(s.id, sem).length);
+    const hint = document.getElementById('ueOrphanHint');
+    hint.classList.toggle('hidden', !orphans.length);
+    hint.textContent = orphans.length ? `Notes non comptées dans les UE (aucun poids pour ce semestre) : ${orphans.map(s => s.name).join(', ')}. Règle-les dans Paramètres.` : '';
+
+    const subjects = allSubjects.filter(s => inSem(s) || Store.gradesForSubject(s.id, sem).length || !Object.keys(s.ueWeights || {}).length);
     const container = document.getElementById('subjectGradesList');
     const emptyState = document.getElementById('notesEmptyState');
 
-    if(!subjects.length){
-      container.innerHTML = '';
-      emptyState.classList.remove('hidden');
-      return;
-    }
-    emptyState.classList.add('hidden');
+    emptyState.classList.toggle('hidden', allSubjects.length > 0);
+    if(!subjects.length){ container.innerHTML = ''; return; }
 
     container.innerHTML = subjects.map(s => {
-      const grades = Store.gradesForSubject(s.id).slice().sort((a, b) => b.date.localeCompare(a.date));
-      const avg = Store.subjectAverage(s.id);
+      const grades = Store.gradesForSubject(s.id, sem).slice().sort((a, b) => b.date.localeCompare(a.date));
+      const avg = Store.subjectAverage(s.id, sem);
 
       const gradesHtml = grades.length
         ? grades.map(g => {
@@ -405,7 +421,7 @@ const UI = (function(){
         <span class="subject-dot subject-dot-lg" style="background:${s.color}"></span>
         <div class="profile-manage-body">
           <p class="profile-manage-name">${escapeHtml(s.name)}</p>
-          <div class="tag-row"><span class="tag">Coefficient ${s.coefficient}</span></div>
+          <div class="tag-row">${Object.keys(s.ueWeights || {}).length ? Object.entries(s.ueWeights).map(([ue, w]) => `<span class="tag">${ue} · ${w}%</span>`).join('') : '<span class="tag">Sans UE</span>'}</div>
         </div>
         <span class="chevron">${iconSvg('pencil')}</span>
       </div>
@@ -646,7 +662,7 @@ const UI = (function(){
   return {
     escapeHtml, updateTopbar, showToast,
     renderToday, renderTodoView, renderDashboard, renderTasksView, showProfilePrompt,
-    renderScolaireView, renderScolaireDevoirs, renderScolaireNotes, renderScolaireParametres,
+    renderScolaireView, renderScolaireDevoirs, renderScolaireNotes, setNotesSemester, renderScolaireParametres,
     renderScolaireTomuss, renderTomussReview, refreshTomussSelection,
     buildIconGrid, buildProfileChipGrid, buildSingleChipGrid, buildDayToggleGrid, buildColorGrid,
   };
