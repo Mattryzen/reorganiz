@@ -184,29 +184,69 @@ function seedData(){
   };
 }
 
+// Remet des données (venant du stockage ou d'un fichier de sauvegarde) au format courant.
+// Renvoie null si l'objet n'a pas la forme d'une sauvegarde Routine.
+// Toute nouvelle clé ajoutée aux données dans une future mise à jour doit recevoir sa valeur par défaut ICI :
+// c'est ce qui permet aux anciennes données (et anciennes sauvegardes) de rester compatibles.
+function normalizeData(parsed){
+  if(!parsed || typeof parsed !== 'object') return null;
+  if(!Array.isArray(parsed.profiles) || !Array.isArray(parsed.tasks) || !parsed.logs || typeof parsed.logs !== 'object') return null;
+  if(!Array.isArray(parsed.todos)) parsed.todos = [];
+  // Migration : anciennes données sans le module scolaire.
+  if(!Array.isArray(parsed.subjects)) parsed.subjects = [];
+  if(!Array.isArray(parsed.homework)) parsed.homework = [];
+  if(!Array.isArray(parsed.grades)) parsed.grades = [];
+  // Migration : poids d'UE par matière (les matières et notes existantes sont conservées telles quelles).
+  parsed.subjects.forEach(x => { if(!x.ueWeights || typeof x.ueWeights !== 'object') x.ueWeights = {}; });
+  if(!parsed.butS1Matched){ applyButS1Preset(parsed, false); parsed.butS1Matched = true; }
+  // Migration : anciennes données sans la synchronisation Tomuss.
+  parsed.tomuss = Object.assign(defaultTomuss(), parsed.tomuss || {});
+  if(!parsed.tomuss.ueMap || typeof parsed.tomuss.ueMap !== 'object') parsed.tomuss.ueMap = {};
+  if(!parsed.tomuss.dismissed || typeof parsed.tomuss.dismissed !== 'object') parsed.tomuss.dismissed = {};
+  return parsed;
+}
+
 function loadData(){
+  let raw = null;
   try{
-    const raw = localStorage.getItem(STORAGE_KEY);
+    raw = localStorage.getItem(STORAGE_KEY);
     if(!raw) return seedData();
-    const parsed = JSON.parse(raw);
-    if(!parsed.profiles || !parsed.tasks || !parsed.logs) return seedData();
-    if(!Array.isArray(parsed.todos)) parsed.todos = [];
-    // Migration : anciennes données sans le module scolaire.
-    if(!Array.isArray(parsed.subjects)) parsed.subjects = [];
-    if(!Array.isArray(parsed.homework)) parsed.homework = [];
-    if(!Array.isArray(parsed.grades)) parsed.grades = [];
-    // Migration : poids d'UE par matière (les matières et notes existantes sont conservées telles quelles).
-    parsed.subjects.forEach(x => { if(!x.ueWeights || typeof x.ueWeights !== 'object') x.ueWeights = {}; });
-    if(!parsed.butS1Matched){ applyButS1Preset(parsed, false); parsed.butS1Matched = true; }
-    // Migration : anciennes données sans la synchronisation Tomuss.
-    parsed.tomuss = Object.assign(defaultTomuss(), parsed.tomuss || {});
-    if(!parsed.tomuss.ueMap || typeof parsed.tomuss.ueMap !== 'object') parsed.tomuss.ueMap = {};
-    if(!parsed.tomuss.dismissed || typeof parsed.tomuss.dismissed !== 'object') parsed.tomuss.dismissed = {};
-    return parsed;
+    const data = normalizeData(JSON.parse(raw));
+    if(data) return data;
+    throw new Error('Format de données inattendu');
   }catch(e){
-    console.error('Erreur de lecture des données locales, réinitialisation.', e);
+    console.error('Erreur de lecture des données locales.', e);
+    // On ne perd jamais les données illisibles : copie de secours avant que l'app ne réécrive par-dessus.
+    try{ if(raw) localStorage.setItem(STORAGE_KEY + '_illisible', raw); }catch(_){}
     return seedData();
   }
+}
+
+/* ---------- Sauvegarde / restauration par fichier ---------- */
+const BACKUP_APP_ID = 'routine-app-backup';
+const BACKUP_FORMAT_VERSION = 1;
+
+function buildBackup(data){
+  return {
+    app: BACKUP_APP_ID,
+    formatVersion: BACKUP_FORMAT_VERSION,
+    exportedAt: new Date().toISOString(),
+    data,
+  };
+}
+
+// Lit le contenu d'un fichier de sauvegarde. Renvoie { data } ou { error }.
+function parseBackup(text){
+  let obj;
+  try{ obj = JSON.parse(text); }catch(e){ return { error: "Ce fichier n'est pas un JSON valide." }; }
+  // Accepte l'enveloppe { app, data } ou directement l'objet de données.
+  const payload = (obj && obj.app === BACKUP_APP_ID) ? obj.data : obj;
+  if(obj && obj.app === BACKUP_APP_ID && obj.formatVersion > BACKUP_FORMAT_VERSION){
+    return { error: "Cette sauvegarde vient d'une version plus récente de l'app." };
+  }
+  const data = normalizeData(payload);
+  if(!data) return { error: "Ce fichier ne ressemble pas à une sauvegarde Routine." };
+  return { data };
 }
 
 function saveData(data){

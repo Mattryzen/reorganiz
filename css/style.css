@@ -490,6 +490,23 @@ a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visib
 }
 
 .chart-card-head{ margin-bottom: 14px; }
+/* Conteneur à hauteur fixe : indispensable à Chart.js (responsive + maintainAspectRatio:false) */
+.chart-canvas-wrap{ position: relative; height: 260px; width: 100%; }
+.chart-canvas-wrap canvas{ position: absolute; inset: 0; }
+
+/* Sauvegarde / restauration */
+.backup-card{
+  margin-top: 28px;
+  padding: 20px 22px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+.backup-card h3{ font-size: 15.5px; font-weight: 700; margin-bottom: 6px; }
+.backup-card p{ font-size: 13.5px; color: var(--color-text-soft); margin-bottom: 14px; }
+.backup-actions{ display: flex; flex-wrap: wrap; gap: 10px; }
+.backup-file-btn{ cursor: pointer; }
 .chart-card-head h3, .missed-card h3{
   font-size: 15.5px;
   font-weight: 700;

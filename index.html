@@ -140,7 +140,9 @@
         <div class="chart-card-head">
           <h3>Complétion — 14 derniers jours</h3>
         </div>
-        <canvas id="completionChart" height="230" aria-label="Graphique du taux de complétion sur 14 jours" role="img"></canvas>
+        <div class="chart-canvas-wrap">
+          <canvas id="completionChart" aria-label="Graphique du taux de complétion sur 14 jours" role="img"></canvas>
+        </div>
       </div>
 
       <div class="missed-card" id="missedTasksCard">
@@ -165,6 +167,18 @@
         <button class="btn btn-secondary" id="openAddProfileBtn" type="button">+ Nouveau profil</button>
       </div>
       <div class="profile-manage-list" id="profileManageList"></div>
+
+      <div class="backup-card">
+        <h3>Sauvegarde des données</h3>
+        <p>Exporte toutes tes données (tâches, historique, à faire, matières, notes, réglages Tomuss…) dans un fichier sur ton appareil, puis réimporte-le quand tu veux, par exemple sur un autre navigateur. Le fichier contient ton lien Tomuss personnel : ne le partage pas.</p>
+        <div class="backup-actions">
+          <button class="btn btn-primary" id="exportBackupBtn" type="button">Exporter mes données</button>
+          <label class="btn btn-secondary backup-file-btn">
+            Importer une sauvegarde
+            <input type="file" id="importBackupInput" class="hidden" accept=".json,application/json">
+          </label>
+        </div>
+      </div>
 
       <div class="danger-zone">
         <button class="btn btn-text danger" id="resetDataBtn" type="button">Réinitialiser toutes les données</button>

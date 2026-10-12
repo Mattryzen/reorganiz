@@ -288,6 +288,50 @@
     }
   });
 
+  /* ---------- Sauvegarde / restauration ---------- */
+  document.getElementById('exportBackupBtn').addEventListener('click', () => {
+    const json = JSON.stringify(Store.exportBackup(), null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `routine-sauvegarde-${Store.toISO(new Date())}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    UI.showToast('Sauvegarde exportée');
+  });
+
+  document.getElementById('importBackupInput').addEventListener('change', (e) => {
+    const input = e.target;
+    const file = input.files && input.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const res = parseBackup(String(reader.result));
+      if(res.error){ UI.showToast(res.error); input.value = ''; return; }
+      const s = Store.backupSummary(res.data);
+      const msg = `Importer cette sauvegarde ?\n\n${s.tasks} tâche(s), ${s.profiles} profil(s), ${s.days} jour(s) d'historique, ${s.todos} à-faire, ${s.subjects} matière(s), ${s.grades} note(s).\n\nTes données actuelles seront remplacées.`;
+      if(confirm(msg)){
+        if(Store.importBackup(res.data)){
+          switchView('today');
+          UI.showToast('Sauvegarde importée');
+        }else{
+          UI.showToast("Import impossible : stockage du navigateur plein ou bloqué");
+        }
+      }
+      input.value = '';
+    };
+    reader.onerror = () => { UI.showToast('Lecture du fichier impossible'); input.value = ''; };
+    reader.readAsText(file);
+  });
+
+  // Demande au navigateur de ne pas purger le stockage local (mise à jour, manque de place…).
+  if(navigator.storage && navigator.storage.persist){
+    navigator.storage.persist().catch(() => {});
+  }
+
   /* ---------- Réinitialisation générale ---------- */
   document.getElementById('resetDataBtn').addEventListener('click', () => {
     if(confirm('Cette action supprime toutes tes tâches, profils et statistiques. Continuer ?')){

@@ -559,6 +559,33 @@ const Store = (function(){
     persist();
   }
 
+  /* ---------- Sauvegarde / restauration ---------- */
+  function exportBackup(){ return buildBackup(data); }
+
+  // Remplace toutes les données par celles du fichier. L'état précédent est gardé
+  // dans une clé de secours du navigateur au cas où l'import ne serait pas celui voulu.
+  function importBackup(newData){
+    try{
+      const prev = localStorage.getItem(STORAGE_KEY);
+      if(prev) localStorage.setItem(STORAGE_KEY + '_avant_import', prev);
+    }catch(e){ console.warn('Copie de secours avant import impossible.', e); }
+    data = newData;
+    return saveData(data);
+  }
+
+  function backupSummary(d){
+    d = d || data;
+    return {
+      tasks: d.tasks.length,
+      profiles: d.profiles.length,
+      todos: d.todos.length,
+      days: Object.keys(d.logs).length,
+      subjects: d.subjects.length,
+      grades: d.grades.length,
+      homework: d.homework.length,
+    };
+  }
+
   function resetAll(){
     clearData();
     data = seedData();
@@ -579,6 +606,7 @@ const Store = (function(){
     subjectAverage, overallAverage, ueAverage, applyButPreset, resetSchoolData,
     getTomuss, setTomussSettings, markTomussSynced, getTomussSubjectId, setTomussSubjectId,
     findGradeByTomussKey, isTomussDismissed, countTomussDismissed, clearTomussDismissed, applyTomussImport,
+    exportBackup, importBackup, backupSummary,
     resetAll,
   };
 })();
