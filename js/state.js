@@ -377,9 +377,24 @@ const Store = (function(){
     return data.grades.filter(g => g.subjectId === subjectId && (!semester || semesterOfDate(g.date) === semester));
   }
 
-  function addGrade({ subjectId, title, value, maxPoints, coefficient, date }){
+  // Une note compte pour une UE si elle n'est limitée à aucune UE, ou si l'UE fait partie de sa liste.
+  function gradeCountsForUe(g, ue){
+    return !g.ues || !g.ues.length || g.ues.includes(ue);
+  }
+
+  // true si la note est limitée à des UE où sa matière n'a aucun poids : elle ne compterait nulle part.
+  function gradeHasNoEffectiveUe(g){
+    if(!g.ues || !g.ues.length) return false;
+    const s = getSubject(g.subjectId);
+    const keys = s ? Object.keys(s.ueWeights || {}) : [];
+    if(!keys.length) return false; // matière sans poids : déjà signalé ailleurs
+    return !g.ues.some(u => Number(s.ueWeights[u]) > 0);
+  }
+
+  function addGrade({ subjectId, title, value, maxPoints, coefficient, date, ues }){
     const grade = {
       id: uid('grade'),
+      ues: cleanUes(ues),
       subjectId,
       title: (title || '').trim(),
       value: Number(value),
@@ -393,9 +408,10 @@ const Store = (function(){
     return grade;
   }
 
-  function updateGrade(id, { subjectId, title, value, maxPoints, coefficient, date }){
+  function updateGrade(id, { subjectId, title, value, maxPoints, coefficient, date, ues }){
     const g = getGrade(id);
     if(!g) return null;
+    if(ues !== undefined) g.ues = cleanUes(ues);
     g.subjectId = subjectId;
     g.title = (title || '').trim();
     g.value = Number(value);
@@ -417,8 +433,10 @@ const Store = (function(){
   }
 
   // Moyenne d'une matière : chaque note est ramenée sur 20, puis pondérée par son coefficient.
-  function subjectAverage(subjectId, semester){
-    const grades = gradesForSubject(subjectId, semester);
+  // ue (facultatif) : ne garde que les notes qui comptent pour cette UE.
+  function subjectAverage(subjectId, semester, ue){
+    let grades = gradesForSubject(subjectId, semester);
+    if(ue) grades = grades.filter(g => gradeCountsForUe(g, ue));
     if(!grades.length) return null;
     let weightedSum = 0, coeffSum = 0;
     grades.forEach(g => {
@@ -446,6 +464,7 @@ const Store = (function(){
   }
 
   // Moyenne d'une UE : moyenne des matières/SAÉ pondérées par leur poids dans l'UE (tableau du BUT).
+  // Dans chaque matière, seules comptent les notes assignées à cette UE (ou sans UE précisée).
   // Seules les matières déjà notées comptent ; coverage = part du poids total de l'UE déjà notée.
   function ueAverage(ue, semester){
     let sum = 0, wSum = 0, wTotal = 0;
@@ -453,7 +472,7 @@ const Store = (function(){
       const w = Number((s.ueWeights || {})[ue]) || 0;
       if(w <= 0) return;
       wTotal += w;
-      const avg = subjectAverage(s.id, semester);
+      const avg = subjectAverage(s.id, semester, ue);
       if(avg === null) return;
       sum += avg * w;
       wSum += w;
@@ -510,9 +529,9 @@ const Store = (function(){
   }
 
   // Applique les notes validées à l'écran de vérification.
-  // entry = { key, ue, value, max, date, title, subjectId, coefficient, existingId }
+  // entry = { key, ue, value, max, date, title, subjectId, coefficient, ues, existingId }
   // - sans existingId : nouvelle note ; avec existingId : la note locale est mise à jour
-  //   (matière, intitulé et coefficient choisis par l'utilisateur sont conservés).
+  //   (matière, intitulé, coefficient et UE choisis par l'utilisateur sont conservés).
   function applyTomussImport(entries){
     let added = 0, updated = 0;
     const now = new Date().toISOString();
@@ -535,6 +554,7 @@ const Store = (function(){
           value: e.value,
           maxPoints: e.max,
           coefficient: Number(e.coefficient) || 1,
+          ues: cleanUes(e.ues),
           date: e.date || todayISO(),
           createdAt: todayISO(),
           tomuss: meta,
@@ -602,7 +622,7 @@ const Store = (function(){
     getSubjects, getSubject, addSubject, updateSubject, deleteSubject,
     getHomework, getHomeworkItem, addHomework, updateHomework, toggleHomeworkDone,
     deleteHomework, isHomeworkActive, clearDoneHomework,
-    getGrades, getGrade, gradesForSubject, addGrade, updateGrade, deleteGrade,
+    getGrades, getGrade, gradesForSubject, gradeCountsForUe, gradeHasNoEffectiveUe, addGrade, updateGrade, deleteGrade,
     subjectAverage, overallAverage, ueAverage, applyButPreset, resetSchoolData,
     getTomuss, setTomussSettings, markTomussSynced, getTomussSubjectId, setTomussSubjectId,
     findGradeByTomussKey, isTomussDismissed, countTomussDismissed, clearTomussDismissed, applyTomussImport,

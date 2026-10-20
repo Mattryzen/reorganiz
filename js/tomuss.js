@@ -136,6 +136,7 @@ const Tomuss = (function(){
         status,
         previous,
         existingId: existing ? existing.id : null,
+        suggestedUe: ueFromTomussCode(it.ue), // ex. UE-C4BR121 -> UE1.2
       }));
     });
 

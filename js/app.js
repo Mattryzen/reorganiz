@@ -350,6 +350,7 @@
   let currentHomeworkType = 'devoir';
   let editingGradeId = null;
   let gradeSubjectSelection = null;
+  let gradeUeSelection = [];
   let editingSubjectId = null;
 
   const homeworkModalOverlay = document.getElementById('homeworkModalOverlay');
@@ -476,10 +477,44 @@
   /* ---------- Modale : Note ---------- */
   function renderGradeSubjectGrid(){
     UI.buildSingleChipGrid(document.getElementById('gradeSubjectGrid'), Store.getSubjects(), gradeSubjectSelection, (id) => {
-      gradeSubjectSelection = id;
+      if(id !== gradeSubjectSelection){
+        gradeSubjectSelection = id;
+        gradeUeSelection = []; // les UE dépendent de la matière : on repart de « toutes »
+      }
       renderGradeSubjectGrid();
+      renderGradeUeGrid();
     });
   }
+
+  // UE proposées : celles où la matière a un poids pour le semestre de la date (toutes les UE du semestre
+  // si la matière n'a aucun poids), plus celles déjà cochées pour ne jamais en masquer une.
+  function renderGradeUeGrid(){
+    const grid = document.getElementById('gradeUeGrid');
+    const hint = document.getElementById('gradeUeHint');
+    const subject = Store.getSubject(gradeSubjectSelection);
+    const sem = semesterOfDate(document.getElementById('gradeDate').value || todayISO());
+    const weights = subject ? (subject.ueWeights || {}) : {};
+    let list = UES_BY_SEM[sem].filter(ue => Number(weights[ue]) > 0);
+    if(!list.length) list = UES_BY_SEM[sem].slice();
+    gradeUeSelection.forEach(ue => { if(!list.includes(ue)) list.push(ue); });
+    list.sort();
+
+    grid.innerHTML = list.map(ue =>
+      `<button type="button" class="chip-toggle ${gradeUeSelection.includes(ue) ? 'is-active' : ''}" data-ue="${ue}">${ue}</button>`
+    ).join('');
+    grid.querySelectorAll('.chip-toggle').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ue = btn.dataset.ue;
+        gradeUeSelection = gradeUeSelection.includes(ue) ? gradeUeSelection.filter(x => x !== ue) : [...gradeUeSelection, ue];
+        renderGradeUeGrid();
+      });
+    });
+    hint.textContent = gradeUeSelection.length
+      ? `Cette note compte uniquement dans : ${gradeUeSelection.slice().sort().join(', ')}.`
+      : 'Aucune sélection : la note compte dans toutes les UE de la matière.';
+  }
+
+  document.getElementById('gradeDate').addEventListener('change', renderGradeUeGrid);
 
   function openGradeModal(gradeId, presetSubjectId){
     editingGradeId = gradeId || null;
@@ -496,7 +531,9 @@
 
     const subjects = Store.getSubjects();
     gradeSubjectSelection = grade ? grade.subjectId : (presetSubjectId || (subjects[0] ? subjects[0].id : null));
+    gradeUeSelection = grade ? cleanUes(grade.ues) : [];
     renderGradeSubjectGrid();
+    renderGradeUeGrid();
 
     gradeModalOverlay.classList.remove('hidden');
   }
@@ -533,6 +570,7 @@
       maxPoints,
       coefficient: Number(document.getElementById('gradeCoefficient').value) || 1,
       date: document.getElementById('gradeDate').value || Store.toISO(new Date()),
+      ues: gradeUeSelection,
     };
 
     if(editingGradeId){
@@ -803,6 +841,7 @@
           title: e.column,
           subjectId,
           coefficient: coefInput ? Number(coefInput.value) || 1 : 1,
+          ues: Array.from(tomussReviewBox.querySelectorAll(`[data-tomuss-ue^="${gi}:${ei}:"].is-active`)).map(b => b.dataset.ue),
           existingId: e.existingId,
         });
       });
@@ -826,6 +865,11 @@
   }
 
   tomussReviewBox.addEventListener('click', (e) => {
+    const ueChip = e.target.closest('[data-tomuss-ue]');
+    if(ueChip){
+      ueChip.classList.toggle('is-active');
+      return;
+    }
     if(e.target.closest('[data-tomuss-import]')){
       importTomussSelection();
     }else if(e.target.closest('[data-tomuss-cancel]')){

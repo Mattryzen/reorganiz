@@ -1296,3 +1296,14 @@ input[type="checkbox"]{ accent-color: var(--color-primary); }
 .ue-weights-sem{ font-weight: 700; font-size: 12px; width: 24px; }
 .ue-weight{ display: flex; flex-direction: column; font-size: 11px; color: var(--color-text-soft); }
 .ue-weight input{ width: 54px; padding: 6px; }
+
+/* ---------- UE assignées à une note ---------- */
+.grade-ue-tags{ margin-top: 5px; }
+.tomuss-ue-row{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.tomuss-ue-chip{ padding: 3px 10px; font-size: 12px; }

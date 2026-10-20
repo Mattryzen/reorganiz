@@ -372,11 +372,15 @@ const UI = (function(){
               : '';
             const coeffLabel = g.coefficient !== 1 ? ` · coeff. ${g.coefficient}` : '';
             const sourceLabel = g.tomuss ? ' · Tomuss' : '';
+            const ueTags = (g.ues && g.ues.length)
+              ? `<div class="tag-row grade-ue-tags">${g.ues.map(u => `<span class="tag">${u}</span>`).join('')}${Store.gradeHasNoEffectiveUe(g) ? '<span class="tag tag-warning">Hors UE de la matière : non comptée</span>' : ''}</div>`
+              : '';
             return `
               <div class="grade-row" data-grade-id="${g.id}">
                 <div class="grade-row-body">
                   <p class="grade-row-title">${escapeHtml(g.title || 'Note')}</p>
                   <p class="grade-row-meta">${formatDateShort(g.date)}${coeffLabel}${sourceLabel}</p>
+                  ${ueTags}
                 </div>
                 <div class="grade-row-value-wrap">
                   <div class="grade-row-value">${g.value}/${g.maxPoints}</div>
@@ -506,6 +510,13 @@ const UI = (function(){
         const badge = e.status === 'updated'
           ? `<span class="tag tag-warning">Modifiée · avant ${e.previous.value}/${e.previous.max}</span>`
           : '<span class="tag tag-primary">Nouvelle</span>';
+        // UE de la note : pré-cochée d'après le code Tomuss, modifiable. Sans UE cochée = toutes celles de la matière.
+        const semUes = e.suggestedUe ? UES_BY_SEM[e.suggestedUe.charAt(2)] : null;
+        const ueChips = (e.status === 'new' && semUes) ? `
+          <div class="tomuss-ue-row">
+            <span class="tomuss-hint">UE :</span>
+            ${semUes.map(u => `<button type="button" class="chip-toggle tomuss-ue-chip ${u === e.suggestedUe ? 'is-active' : ''}" data-tomuss-ue="${pos}:${u}" data-ue="${u}">${u}</button>`).join('')}
+          </div>` : '';
         const coef = e.status === 'new' ? `
           <label class="tomuss-coef">
             <span>Coeff.</span>
@@ -518,6 +529,7 @@ const UI = (function(){
             <div class="tomuss-row-body">
               <p class="grade-row-title">${escapeHtml(e.column)}</p>
               <p class="grade-row-meta">${formatDateShort(e.date)} ${badge}</p>
+              ${ueChips}
             </div>
             <div class="grade-row-value-wrap">
               <div class="grade-row-value">${e.value}/${e.max}</div>

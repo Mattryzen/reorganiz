@@ -60,6 +60,22 @@ const BUT_S1 = [
   ['R1.11','Bases de la communication',{'UE1.3':6,'UE1.5':15,'UE1.6':11}],
   ['R1.12','Projet professionnel et personnel',{'UE1.6':11}],
 ];
+/* ---------- UE assignées à une note ----------
+   grade.ues = liste de codes d'UE (ex. ['UE1.6']) pour lesquelles la note compte.
+   Liste vide ou absente = la note compte dans toutes les UE de sa matière (comportement historique). */
+function cleanUes(list){
+  const seen = new Set();
+  (Array.isArray(list) ? list : []).forEach(u => { if(/^UE\d\.\d$/.test(u)) seen.add(u); });
+  return Array.from(seen).sort();
+}
+// Code Tomuss -> UE : on prend les 2 chiffres avant le dernier chiffre.
+//   UE-C4BR121 -> « 12 » -> UE1.2 ; UE-C4BR111 -> UE1.1. Renvoie null si ça ne correspond à aucune UE connue.
+function ueFromTomussCode(code){
+  const m = /(\d)(\d)\d$/.exec(String(code || '').trim());
+  if(!m) return null;
+  const ue = `UE${m[1]}.${m[2]}`;
+  return Object.values(UES_BY_SEM).some(list => list.includes(ue)) ? ue : null;
+}
 function normKey(t){ return String(t || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,''); }
 // Associe les poids d'UE aux matières existantes (jamais d'écrasement, jamais de suppression).
 // create = true : crée aussi les matières manquantes.
@@ -199,6 +215,20 @@ function normalizeData(parsed){
   // Migration : poids d'UE par matière (les matières et notes existantes sont conservées telles quelles).
   parsed.subjects.forEach(x => { if(!x.ueWeights || typeof x.ueWeights !== 'object') x.ueWeights = {}; });
   if(!parsed.butS1Matched){ applyButS1Preset(parsed, false); parsed.butS1Matched = true; }
+  // Migration : UE par note. Les notes existantes ne perdent rien ; celles venues de Tomuss reçoivent
+  // l'UE lue dans leur code, une seule fois, et seulement si la matière a un poids dans cette UE
+  // (sinon la note resterait comptée partout, comme avant). L'utilisateur peut ensuite tout modifier.
+  if(!parsed.gradeUesMigrated){
+    parsed.grades.forEach(g => {
+      if(Array.isArray(g.ues)) return;
+      g.ues = [];
+      const ue = g.tomuss ? ueFromTomussCode(g.tomuss.ue) : null;
+      const subj = parsed.subjects.find(s => s.id === g.subjectId);
+      if(ue && subj && Number((subj.ueWeights || {})[ue]) > 0) g.ues = [ue];
+    });
+    parsed.gradeUesMigrated = true;
+  }
+  parsed.grades.forEach(g => { g.ues = cleanUes(g.ues); });
   // Migration : anciennes données sans la synchronisation Tomuss.
   parsed.tomuss = Object.assign(defaultTomuss(), parsed.tomuss || {});
   if(!parsed.tomuss.ueMap || typeof parsed.tomuss.ueMap !== 'object') parsed.tomuss.ueMap = {};
